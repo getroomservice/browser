@@ -1,0 +1,10 @@
+{
+  "name": "getroomservice-browser",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "devDependencies": {
+    "lerna": "^3.19.0"
+  },
+  "private": true
+}

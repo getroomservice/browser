@@ -1,4 +1,4 @@
-import { authorize, ROOM_SERICE_SOCKET_URL } from "@getroomservice/core";
+import { authorize, ROOM_SERICE_SOCKET_URL } from "@roomservice/core";
 import Automerge from "automerge";
 import { useEffect, useState } from "react";
 import safeJsonStringify from "safe-json-stringify";
@@ -10,7 +10,7 @@ export function useInternalHook<T extends object>(
   authorizationUrl: string,
   defaultState?: T
 ): [T, (cb: (prevState: T) => void) => any, boolean] {
-  const [doc, changeDoc, loadDoc] = useAutomerge(defaultState);
+  const [doc, changeDoc, loadDoc] = useAutomerge(defaultState || {});
   const [isConnected, setIsConnected] = useState();
   const [socket, setSocket] = useState<SocketIOClient.Socket>();
   const [room, setRoom] = useState();

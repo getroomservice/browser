@@ -1,6 +1,6 @@
 {
-  "name": "@getroomservice/core",
-  "version": "0.0.1-alpha.0",
+  "name": "@roomservice/core",
+  "version": "0.0.1-alpha.1",
   "description": "The core components of room service's JS sdks",
   "author": "Flaque <evanjamesconrad@gmail.com>",
   "homepage": "",

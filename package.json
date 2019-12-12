@@ -1,0 +1,36 @@
+{
+  "name": "@roomservice/browser",
+  "version": "0.0.4",
+  "main": "dist/index",
+  "types": "dist/index",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "rm -rf ./dist && tsc",
+    "clean": "rm -rf ./dist",
+    "compile": "tsc -p tsconfig.build.json",
+    "prepublishOnly": "yarn run build",
+    "test": "jest"
+  },
+  "devDependencies": {
+    "@types/invariant": "^2.2.30",
+    "@types/jest": "^24.0.23",
+    "@types/node": "^12.12.17",
+    "@types/safe-json-stringify": "^1.1.0",
+    "@types/socket.io-client": "^1.4.32",
+    "jest": "^24.9.0",
+    "nock": "^11.7.0",
+    "ts-jest": "^24.2.0",
+    "typescript": "^3.7.3"
+  },
+  "dependencies": {
+    "automerge": "^0.12.1",
+    "idb-keyval": "^3.2.0",
+    "invariant": "^2.2.4",
+    "ky": "^0.16.1",
+    "ky-universal": "^0.3.0",
+    "safe-json-stringify": "^1.2.0",
+    "socket.io-client": "^2.3.0"
+  }
+}

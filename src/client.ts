@@ -14,10 +14,6 @@ interface RoomValue {
   };
 }
 
-function fromRoomStr(roomStr: string) {
-  return JSON.parse(roomStr) as RoomValue;
-}
-
 function asRoomStr(room: RoomValue) {
   return safeJsonStringify(room);
 }
@@ -123,7 +119,6 @@ export class RoomClient<T extends KeyValueObject> {
         current || Automerge.init(),
         Automerge.load(state.data)
       );
-      console.log(newDoc);
       callback(newDoc as Readonly<T>);
     };
 

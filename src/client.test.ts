@@ -75,7 +75,7 @@ describe("RoomServiceClient", () => {
     const room = client.room("my-room");
     await room.connect();
 
-    room.publish({}, prevState => {
+    room.publishState(prevState => {
       prevState.someOption = "hello!";
     });
 

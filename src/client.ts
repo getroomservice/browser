@@ -18,12 +18,10 @@ function asRoomStr(room: RoomValue) {
   return safeJsonStringify(room);
 }
 
-const isEmptyObj = (obj: any) =>
-  Object.entries(obj).length === 0 && obj.constructor === Object;
-
-export class RoomClient<T extends KeyValueObject> {
+class RoomClient<T extends KeyValueObject> {
   private _socket?: SocketIOClient.Socket;
   private _roomId?: string;
+  private _state: FreezeObject<T>;
   private readonly _reference: string;
   private readonly _authorizationUrl: string;
 
@@ -31,9 +29,10 @@ export class RoomClient<T extends KeyValueObject> {
   private _onConnectCallback?: () => any;
   private _onDisconnectCallback?: () => any;
 
-  constructor(authorizationUrl: string, reference: string) {
+  constructor(authorizationUrl: string, reference: string, state?: T) {
     this._reference = reference;
     this._authorizationUrl = authorizationUrl;
+    this._state = Automerge.from(state || ({} as T));
   }
 
   async connect() {
@@ -88,7 +87,7 @@ export class RoomClient<T extends KeyValueObject> {
     }
   }
 
-  onUpdate(current: FreezeObject<T>, callback: (state: Readonly<T>) => any) {
+  onUpdate(callback: (state: Readonly<T>) => any) {
     invariant(
       !this._onUpdateCallback,
       "It looks like you've called onUpdate multiple times. Since this can cause quite severe performance issues if used incorrectly, we're not currently supporting this behavior. If you've got a use-case we haven't thought of, file a github issue and we may change this."
@@ -115,11 +114,8 @@ export class RoomClient<T extends KeyValueObject> {
       }
 
       // Merge! :D
-      const newDoc = Automerge.merge(
-        current || Automerge.init(),
-        Automerge.load(state.data)
-      );
-      callback(newDoc as Readonly<T>);
+      this._state = Automerge.merge(this._state, Automerge.load(state.data));
+      callback(this._state as Readonly<T>);
     };
 
     // If we're offline, just wait till we're back online to assign this callback
@@ -151,13 +147,8 @@ export class RoomClient<T extends KeyValueObject> {
     this._socket.on("disconnect", callback);
   }
 
-  publish(current: FreezeObject<T>, callback: (state: T) => void) {
-    let doc = current;
-    if (!current || isEmptyObj(current)) {
-      doc = Automerge.from({} as T);
-    }
-
-    const newDoc = Automerge.change(doc, callback);
+  publishState(callback: (state: T) => void): T {
+    const newDoc = Automerge.change(this._state, callback);
 
     // Offline.set(room.reference, asStr); // TODO OFFLINE
     if (this._socket) {

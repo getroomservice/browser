@@ -1,4 +1,3 @@
-import Automerge from "automerge";
 import nock from "nock";
 import RoomServiceClient from "./client";
 import Sockets from "./socket";
@@ -75,16 +74,10 @@ describe("RoomServiceClient", () => {
     const room = client.room("my-room");
     await room.connect();
 
-    room.publishState(prevState => {
+    const newState = room.publishState(prevState => {
       prevState.someOption = "hello!";
     });
 
-    const [event, str] = emit.mock.calls[0];
-    expect(event).toBe("update_room");
-
-    const params = JSON.parse(str);
-    expect(typeof params.state.data).toBe("string");
-    // @ts-ignore argle bargle ts plz, just believe me, I am thy programmer
-    expect(Automerge.load(params.state.data).someOption).toBe("hello!");
+    expect(newState.someOption).toBe("hello!");
   });
 });

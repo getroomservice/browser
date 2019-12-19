@@ -65,6 +65,7 @@ class RoomClient<T extends KeyValueObject> {
         }
       }
     });
+    this._automergeConn.open();
 
     /**
      * It's possible someone has created their callbacks BEFORE
@@ -162,12 +163,18 @@ class RoomClient<T extends KeyValueObject> {
   }
 
   // The automerge client will call this function when
-  // It picks up changes
-  private _sendMsgToSocket(automergeMsg: Automerge.Message) {
-    // We're not connected to the internet, so we don't do anything
-    if (!this._socket) {
-      return;
-    }
+  // it picks up changes from the docset.
+  //
+  // WARNING: This function is an arrow function specifically because
+  // it needs to access this._socket. If you use a regular function,
+  // it won't work.
+  private _sendMsgToSocket = (automergeMsg: Automerge.Message) => {
+    // Note that this._automergeConn.open() must be called after the socket
+    // definition
+    invariant(
+      !!this._socket,
+      "Expected this._socket to be defined. This is a sign of a broken client, if you're seeing this, please contact us."
+    );
 
     invariant(
       this._roomId,
@@ -181,8 +188,8 @@ class RoomClient<T extends KeyValueObject> {
       }
     };
 
-    Sockets.emit(this._socket, "update_room_state", asRoomStr(room));
-  }
+    Sockets.emit(this._socket!, "update_room_state", asRoomStr(room));
+  };
 
   publishState(callback: (state: T) => void): T {
     const newDoc = Automerge.change(this._docs.getDoc("default"), callback);

@@ -6,15 +6,14 @@ import { ROOM_SERICE_SOCKET_URL } from "./constants";
 import Sockets from "./socket";
 import { KeyValueObject } from "./types";
 
-interface RoomValue {
-  // Note this MUST be the id, not the reference.
-  id: string;
-  state: {
+interface RoomPacket {
+  roomId: string;
+  payload: {
     automergeMsg: Automerge.Message;
   };
 }
 
-function asRoomStr(room: RoomValue) {
+function asRoomStr(room: RoomPacket) {
   return safeJsonStringify(room);
 }
 
@@ -94,6 +93,11 @@ class RoomClient<T extends KeyValueObject> {
     //   const room: RoomValue = fromRoomStr(data as string);
     //   Sockets.emit(this._socket, "update_room", asRoomStr(room));
     // }
+
+    return {
+      state: Automerge.load(room.state) as T,
+      reference: room.reference
+    };
   }
 
   disconnect() {
@@ -109,7 +113,7 @@ class RoomClient<T extends KeyValueObject> {
     );
 
     const socketCallback = (data: string) => {
-      const { id, state } = JSON.parse(data) as RoomValue;
+      const { roomId, payload } = JSON.parse(data) as RoomPacket;
 
       if (!this._roomId) {
         throw new Error(
@@ -119,17 +123,17 @@ class RoomClient<T extends KeyValueObject> {
 
       // This socket event will fire for ALL rooms, so we need to check
       // if this callback refers to this particular room.
-      if (id !== this._roomId) {
+      if (roomId !== this._roomId) {
         return;
       }
 
-      if (!state.automergeMsg) {
+      if (!payload.automergeMsg) {
         throw new Error(
           "The room's state object does not include an 'automergeMsg' attribute, which could signal a corrupted room. If you're seeing this in production, that's quite bad and represents a fixable bug within the SDK itself. Please let us know and we'll fix it immediately!"
         );
       }
 
-      const newDoc = this._automergeConn.receiveMsg(state.automergeMsg);
+      const newDoc = this._automergeConn.receiveMsg(payload.automergeMsg);
       callback(newDoc as Readonly<T>);
     };
 
@@ -181,9 +185,9 @@ class RoomClient<T extends KeyValueObject> {
       "Expected a _roomId to exist when publishing. This is a sign of a broken client, if you're seeing this, please contact us."
     );
 
-    const room: RoomValue = {
-      id: this._roomId as string,
-      state: {
+    const room: RoomPacket = {
+      roomId: this._roomId as string,
+      payload: {
         automergeMsg
       }
     };

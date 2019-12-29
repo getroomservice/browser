@@ -24,7 +24,9 @@ describe("RoomServiceClient", () => {
   const scope = mockAuthEndpoint();
 
   // @ts-ignore
-  jest.spyOn(Sockets, "newSocket").mockImplementation(() => ({}));
+  jest.spyOn(Sockets, "newSocket").mockImplementation(() => ({
+    on: jest.fn()
+  }));
 
   it("should call the authorization endpoint when creating a room", async () => {
     const client = new RoomServiceClient(URL + "/api/roomservice");
@@ -40,7 +42,8 @@ describe("RoomServiceClient", () => {
     const mock = jest
       .spyOn(Sockets, "newSocket")
       .mockImplementation((url, connectopts) => {
-        return {} as SocketIOClient.Socket;
+        // @ts-ignore
+        return { on: jest.fn() } as SocketIOClient.Socket;
       }).mock;
 
     const client = new RoomServiceClient(URL + "/api/roomservice");
@@ -66,7 +69,8 @@ describe("RoomServiceClient", () => {
       // @ts-ignore because typescript doesn't like our deep testing magic
       .mockImplementation((url, connectopts) => {
         return {
-          emit
+          emit,
+          on: jest.fn()
         };
       });
 

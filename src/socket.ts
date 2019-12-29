@@ -12,7 +12,7 @@ const Sockets = {
 
   on(
     socket: SocketIOClient.Socket,
-    event: "connect" | "disconnect" | "update_room_state",
+    event: "connect" | "disconnect" | "sync_room_state" | "error",
     fn: Function
   ) {
     socket.on(event, fn);
@@ -20,7 +20,7 @@ const Sockets = {
 
   emit(
     socket: SocketIOClient.Socket,
-    event: "update_room_state",
+    event: "sync_room_state",
     ...args: any[]
   ) {
     socket.emit(event, ...args);

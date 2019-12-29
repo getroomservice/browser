@@ -7,9 +7,11 @@ import Sockets from "./socket";
 import { KeyValueObject } from "./types";
 
 interface RoomPacket {
-  roomId: string;
+  meta: {
+    roomId: string;
+  };
   payload: {
-    automergeMsg: Automerge.Message;
+    msg: Automerge.Message;
   };
 }
 
@@ -24,6 +26,9 @@ class RoomClient<T extends KeyValueObject> {
   private _roomId?: string;
   private readonly _reference: string;
   private readonly _authorizationUrl: string;
+
+  // We define this as a local variable to make testing easier
+  private _socketURL: string = ROOM_SERICE_SOCKET_URL;
 
   private _onUpdateCallback?: (data: string) => any;
   private _onConnectCallback?: () => any;
@@ -55,7 +60,7 @@ class RoomClient<T extends KeyValueObject> {
     );
 
     this._roomId = room.id;
-    this._socket = Sockets.newSocket(ROOM_SERICE_SOCKET_URL, {
+    this._socket = Sockets.newSocket(this._socketURL, {
       transportOptions: {
         polling: {
           extraHeaders: {
@@ -67,12 +72,20 @@ class RoomClient<T extends KeyValueObject> {
     this._automergeConn.open();
 
     /**
+     * Errors
+     */
+    Sockets.on(this._socket, "error", (data: string) => {
+      const { message } = JSON.parse(data);
+      console.error(`Error from Socket: ${message}`);
+    });
+
+    /**
      * It's possible someone has created their callbacks BEFORE
      * we've actually connected. In this case, we'll just
      * attach them now.
      */
     if (this._onUpdateCallback) {
-      Sockets.on(this._socket, "update_room_state", this._onUpdateCallback);
+      Sockets.on(this._socket, "sync_room_state", this._onUpdateCallback);
     }
     if (this._onConnectCallback) {
       Sockets.on(this._socket, "connect", this._onConnectCallback);
@@ -94,8 +107,16 @@ class RoomClient<T extends KeyValueObject> {
     //   Sockets.emit(this._socket, "update_room", asRoomStr(room));
     // }
 
+    let state;
+    try {
+      state = Automerge.load(room.state) as T;
+    } catch (err) {
+      console.error(err);
+      state = {} as T;
+    }
+
     return {
-      state: Automerge.load(room.state) as T,
+      state,
       reference: room.reference
     };
   }
@@ -113,7 +134,7 @@ class RoomClient<T extends KeyValueObject> {
     );
 
     const socketCallback = (data: string) => {
-      const { roomId, payload } = JSON.parse(data) as RoomPacket;
+      const { meta, payload } = JSON.parse(data) as RoomPacket;
 
       if (!this._roomId) {
         throw new Error(
@@ -123,17 +144,17 @@ class RoomClient<T extends KeyValueObject> {
 
       // This socket event will fire for ALL rooms, so we need to check
       // if this callback refers to this particular room.
-      if (roomId !== this._roomId) {
+      if (meta.roomId !== this._roomId) {
         return;
       }
 
-      if (!payload.automergeMsg) {
+      if (!payload.msg) {
         throw new Error(
-          "The room's state object does not include an 'automergeMsg' attribute, which could signal a corrupted room. If you're seeing this in production, that's quite bad and represents a fixable bug within the SDK itself. Please let us know and we'll fix it immediately!"
+          "The room's state object does not include an 'msg' attribute, which could signal a corrupted room. If you're seeing this in production, that's quite bad and represents a fixable bug within the SDK itself. Please let us know and we'll fix it immediately!"
         );
       }
 
-      const newDoc = this._automergeConn.receiveMsg(payload.automergeMsg);
+      const newDoc = this._automergeConn.receiveMsg(payload.msg);
       callback(newDoc as Readonly<T>);
     };
 
@@ -143,7 +164,7 @@ class RoomClient<T extends KeyValueObject> {
       return;
     }
 
-    Sockets.on(this._socket, "update_room_state", socketCallback);
+    Sockets.on(this._socket, "sync_room_state", socketCallback);
   }
 
   onConnect(callback: () => any) {
@@ -186,13 +207,15 @@ class RoomClient<T extends KeyValueObject> {
     );
 
     const room: RoomPacket = {
-      roomId: this._roomId as string,
+      meta: {
+        roomId: this._roomId as string
+      },
       payload: {
-        automergeMsg
+        msg: automergeMsg
       }
     };
 
-    Sockets.emit(this._socket!, "update_room_state", asRoomStr(room));
+    Sockets.emit(this._socket!, "sync_room_state", asRoomStr(room));
   };
 
   publishState(callback: (state: T) => void): T {

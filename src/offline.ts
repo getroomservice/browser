@@ -12,8 +12,8 @@ interface IOffline {
 }
 
 const Offline: IOffline = {
-  get: (roomRef, docId) => get(roomRef + "/" + docId),
-  set: (roomRef, docId, value) => set(roomRef + "/" + docId, value)
+  get: (roomRef, docId) => get("rs:" + roomRef + "/" + docId),
+  set: (roomRef, docId, value) => set("rs:" + roomRef + "/" + docId, value)
 };
 
 export default Offline;

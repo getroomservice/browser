@@ -65,6 +65,8 @@ class RoomClient<T extends KeyValueObject> {
   }
 
   async connect() {
+    await this.syncOfflineCache();
+
     const { room, session } = await authorize(
       this._authorizationUrl,
       this._reference

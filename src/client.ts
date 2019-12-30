@@ -1,8 +1,10 @@
-import Automerge from "automerge";
+import Automerge, { Doc, load, save } from "automerge";
 import invariant from "invariant";
+import { debounce } from "lodash";
 import safeJsonStringify from "safe-json-stringify";
 import authorize from "./authorize";
 import { ROOM_SERICE_SOCKET_URL } from "./constants";
+import Offline from "./offline";
 import Sockets from "./socket";
 import { KeyValueObject } from "./types";
 
@@ -34,6 +36,8 @@ class RoomClient<T extends KeyValueObject> {
   private _onConnectCallback?: () => any;
   private _onDisconnectCallback?: () => any;
 
+  private _saveOffline: (docId: string, doc: Doc<T>) => void;
+
   constructor(authorizationUrl: string, reference: string, state?: T) {
     this._reference = reference;
     this._authorizationUrl = authorizationUrl;
@@ -51,6 +55,13 @@ class RoomClient<T extends KeyValueObject> {
       this._docs,
       this._sendMsgToSocket
     );
+
+    // We define this here so we can debounce the save function
+    // Otherwise we'll get quite the performance hit
+    let saveOffline = (docId: string, doc: Doc<T>) => {
+      Offline.set(this._reference, docId, save(doc));
+    };
+    this._saveOffline = debounce(saveOffline, 120);
   }
 
   async connect() {
@@ -99,13 +110,7 @@ class RoomClient<T extends KeyValueObject> {
      * actually connected to the client. So we should push up their
      * changes.
      */
-
-    // TODO Offline
-    // const data = await Offline.get(this._reference);
-    // if (data) {
-    //   const room: RoomValue = fromRoomStr(data as string);
-    //   Sockets.emit(this._socket, "update_room", asRoomStr(room));
-    // }
+    this.syncOfflineCache();
 
     let state;
     try {
@@ -155,6 +160,8 @@ class RoomClient<T extends KeyValueObject> {
       }
 
       const newDoc = this._automergeConn.receiveMsg(payload.msg);
+      this._saveOffline("default", newDoc);
+
       callback(newDoc as Readonly<T>);
     };
 
@@ -185,6 +192,14 @@ class RoomClient<T extends KeyValueObject> {
     }
 
     this._socket.on("disconnect", callback);
+  }
+
+  private async syncOfflineCache() {
+    const data = await Offline.get(this._reference, "default");
+    if (data) {
+      const roomDoc = load<T>(data);
+      this._docs.setDoc("default", roomDoc);
+    }
   }
 
   // The automerge client will call this function when
@@ -229,9 +244,7 @@ class RoomClient<T extends KeyValueObject> {
     //   => Automerge.Connection fires handler set in...
     //   => this._sendMsgToSocket()
     this._docs.setDoc("default", newDoc);
-
-    // TODO OFFLINE HERE
-    // Offline.set(room.reference, asStr);
+    this._saveOffline("default", newDoc);
 
     return newDoc;
   }

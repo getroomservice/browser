@@ -1,6 +1,6 @@
 {
   "name": "@roomservice/browser",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "main": "dist/index",
   "types": "dist/index",
   "files": [
@@ -16,6 +16,7 @@
   "devDependencies": {
     "@types/invariant": "^2.2.30",
     "@types/jest": "^24.0.23",
+    "@types/lodash": "^4.14.149",
     "@types/node": "^12.12.17",
     "@types/safe-json-stringify": "^1.1.0",
     "@types/socket.io-client": "^1.4.32",
@@ -30,6 +31,7 @@
     "invariant": "^2.2.4",
     "ky": "^0.16.1",
     "ky-universal": "^0.3.0",
+    "lodash": "^4.17.15",
     "safe-json-stringify": "^1.2.0",
     "socket.io-client": "^2.3.0"
   }

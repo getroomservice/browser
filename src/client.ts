@@ -196,6 +196,10 @@ class RoomClient<T extends KeyValueObject> {
     this._socket.on("disconnect", callback);
   }
 
+  async state() {
+    return this._docs.getDoc("default");
+  }
+
   private async syncOfflineCache() {
     const data = await Offline.get(this._reference, "default");
     if (data) {

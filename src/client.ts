@@ -1,4 +1,4 @@
-import Automerge, { Doc, load, save } from "automerge";
+import Automerge, { Doc, load, merge, save } from "automerge";
 import invariant from "invariant";
 import { debounce } from "lodash";
 import safeJsonStringify from "safe-json-stringify";
@@ -32,9 +32,9 @@ class RoomClient<T extends KeyValueObject> {
   // We define this as a local variable to make testing easier
   private _socketURL: string = ROOM_SERICE_SOCKET_URL;
 
-  private _onUpdateCallback?: (data: string) => any;
-  private _onConnectCallback?: () => any;
-  private _onDisconnectCallback?: () => any;
+  private _onUpdateSocketCallback?: (data: string) => any;
+  private _onConnectSocketCallback?: () => any;
+  private _onDisconnectSocketCallback?: () => any;
 
   private _saveOffline: (docId: string, doc: Doc<T>) => void;
 
@@ -64,9 +64,17 @@ class RoomClient<T extends KeyValueObject> {
     this._saveOffline = debounce(saveOffline, 120);
   }
 
-  async connect() {
-    await this.syncOfflineCache();
+  /**
+   * Manually attempt to restore the state from offline storage.
+   */
+  async restore(): Promise<T> {
+    return this.syncOfflineCache();
+  }
 
+  /**
+   * Attempts to go online.
+   */
+  async connect() {
     const { room, session } = await authorize(
       this._authorizationUrl,
       this._reference
@@ -82,7 +90,7 @@ class RoomClient<T extends KeyValueObject> {
         }
       }
     });
-    this._automergeConn.open();
+    this._automergeConn.open(); // must be called immediately after socket def
 
     /**
      * Errors
@@ -93,30 +101,26 @@ class RoomClient<T extends KeyValueObject> {
     });
 
     /**
-     * It's possible someone has created their callbacks BEFORE
-     * we've actually connected. In this case, we'll just
-     * attach them now.
+     * We don't require these to be defined before hand since they're
+     * optional
      */
-    if (this._onUpdateCallback) {
-      Sockets.on(this._socket, "sync_room_state", this._onUpdateCallback);
+    if (this._onUpdateSocketCallback) {
+      Sockets.on(this._socket, "sync_room_state", this._onUpdateSocketCallback);
     }
-    if (this._onConnectCallback) {
-      Sockets.on(this._socket, "connect", this._onConnectCallback);
+    if (this._onConnectSocketCallback) {
+      Sockets.on(this._socket, "connect", this._onConnectSocketCallback);
     }
-    if (this._onDisconnectCallback) {
-      Sockets.on(this._socket, "disconnect", this._onDisconnectCallback);
+    if (this._onDisconnectSocketCallback) {
+      Sockets.on(this._socket, "disconnect", this._onDisconnectSocketCallback);
     }
 
-    /**
-     * It's also possible someone's been working offline before we've
-     * actually connected to the client. So we should push up their
-     * changes.
-     */
-    this.syncOfflineCache();
-
+    // Merge RoomService's online cache with what we have locally
     let state;
     try {
       state = Automerge.load(room.state) as T;
+      const local = await this.syncOfflineCache();
+      state = merge(local, state);
+      this._docs.setDoc("default", state);
     } catch (err) {
       console.error(err);
       state = {} as T;
@@ -128,15 +132,19 @@ class RoomClient<T extends KeyValueObject> {
     };
   }
 
+  /**
+   * Manually goes offline
+   */
   disconnect() {
     if (this._socket) {
       Sockets.disconnect(this._socket);
     }
+    this._socket = undefined;
   }
 
   onUpdate(callback: (state: Readonly<T>) => any) {
     invariant(
-      !this._onUpdateCallback,
+      !this._onUpdateSocketCallback,
       "It looks like you've called onUpdate multiple times. Since this can cause quite severe performance issues if used incorrectly, we're not currently supporting this behavior. If you've got a use-case we haven't thought of, file a github issue and we may change this."
     );
 
@@ -162,6 +170,17 @@ class RoomClient<T extends KeyValueObject> {
       }
 
       const newDoc = this._automergeConn.receiveMsg(payload.msg);
+
+      // Automerge, in it's infinite wisdom, will just return undefined
+      // if a message is corrupted in some way that it doesn't like.
+      // In these cases, we shouldn't actually save it offline otherwise
+      // we'd create a hard-to-fix corruption.
+      if (!newDoc) {
+        throw new Error(
+          `Response from RoomService API seems corrupted, aborting. Response: ${data}`
+        );
+      }
+
       this._saveOffline("default", newDoc);
 
       callback(newDoc as Readonly<T>);
@@ -169,7 +188,7 @@ class RoomClient<T extends KeyValueObject> {
 
     // If we're offline, just wait till we're back online to assign this callback
     if (!this._socket) {
-      this._onUpdateCallback = socketCallback;
+      this._onUpdateSocketCallback = socketCallback;
       return;
     }
 
@@ -179,7 +198,7 @@ class RoomClient<T extends KeyValueObject> {
   onConnect(callback: () => any) {
     // If we're offline, cue this up for later.
     if (!this._socket) {
-      this._onConnectCallback = callback;
+      this._onConnectSocketCallback = callback;
       return;
     }
 
@@ -189,7 +208,7 @@ class RoomClient<T extends KeyValueObject> {
   onDisconnect(callback: () => any) {
     // If we're offline, cue this up for later.
     if (!this._socket) {
-      this._onDisconnectCallback = callback;
+      this._onDisconnectSocketCallback = callback;
       return;
     }
 
@@ -202,10 +221,23 @@ class RoomClient<T extends KeyValueObject> {
 
   private async syncOfflineCache() {
     const data = await Offline.get(this._reference, "default");
-    if (data) {
-      const roomDoc = load<T>(data);
-      this._docs.setDoc("default", roomDoc);
+    if (!data) {
+      return this._docs.getDoc("default");
     }
+
+    const offlineDoc = load<T>(data);
+    const inMemDoc = this._docs.getDoc("default");
+
+    // Merge the offline doc with the current in-memory doc
+    let newDoc;
+    if (inMemDoc) {
+      newDoc = merge(inMemDoc, offlineDoc);
+    } else {
+      newDoc = offlineDoc;
+    }
+
+    this._docs.setDoc("default", newDoc);
+    return newDoc;
   }
 
   // The automerge client will call this function when

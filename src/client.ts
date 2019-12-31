@@ -108,7 +108,10 @@ class RoomClient<T extends KeyValueObject> {
       Sockets.on(this._socket, "sync_room_state", this._onUpdateSocketCallback);
     }
     if (this._onConnectSocketCallback) {
-      Sockets.on(this._socket, "connect", this._onConnectSocketCallback);
+      Sockets.on(this._socket, "connect", () => {
+        this._onConnectSocketCallback!();
+        this.syncOfflineCache();
+      });
     }
     if (this._onDisconnectSocketCallback) {
       Sockets.on(this._socket, "disconnect", this._onDisconnectSocketCallback);

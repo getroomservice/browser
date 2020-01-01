@@ -75,10 +75,23 @@ class RoomClient<T extends KeyValueObject> {
    * Attempts to go online.
    */
   async connect() {
-    const { room, session } = await authorize(
-      this._authorizationUrl,
-      this._reference
-    );
+    let room;
+    let session: {
+      token: string;
+    };
+
+    try {
+      const params = await authorize(this._authorizationUrl, this._reference);
+      room = params.room;
+      session = params.session;
+    } catch (err) {
+      console.warn(err);
+      await this.syncOfflineCache();
+      return {
+        state: this._docs.getDoc("default"),
+        reference: this._reference
+      };
+    }
 
     this._roomId = room.id;
     this._socket = Sockets.newSocket(this._socketURL, {

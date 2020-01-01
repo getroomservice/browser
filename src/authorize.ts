@@ -28,6 +28,12 @@ export default async function authorize(
     "Your authorization endpoint does not appear to accept a POST request."
   );
 
+  if (result.status < 200 || result.status >= 400) {
+    throw new Error(
+      `Your Auth endpoint at '${authorizationUrl}' is not functioning properly, returned status of ${result.status}.`
+    );
+  }
+
   const res = await result.json();
   const { room, session } = res as {
     room: RoomValue;

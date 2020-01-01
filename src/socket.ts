@@ -13,7 +13,7 @@ const Sockets = {
   on(
     socket: SocketIOClient.Socket,
     event: "connect" | "disconnect" | "sync_room_state" | "error",
-    fn: Function
+    fn: (...args: any[]) => void
   ) {
     socket.on(event, fn);
   },

@@ -90,7 +90,6 @@ class RoomClient<T extends KeyValueObject> {
         }
       }
     });
-    this._automergeConn.open(); // must be called immediately after socket def
 
     /**
      * Errors
@@ -98,6 +97,12 @@ class RoomClient<T extends KeyValueObject> {
     Sockets.on(this._socket, "error", (data: string) => {
       const { message } = JSON.parse(data);
       console.error(`Error from Socket: ${message}`);
+    });
+
+    // Required connect handler
+    Sockets.on(this._socket, "connect", () => {
+      this._automergeConn.open();
+      this.syncOfflineCache();
     });
 
     /**
@@ -108,10 +113,7 @@ class RoomClient<T extends KeyValueObject> {
       Sockets.on(this._socket, "sync_room_state", this._onUpdateSocketCallback);
     }
     if (this._onConnectSocketCallback) {
-      Sockets.on(this._socket, "connect", () => {
-        this._onConnectSocketCallback!();
-        this.syncOfflineCache();
-      });
+      Sockets.on(this._socket, "connect", this._onConnectSocketCallback);
     }
     if (this._onDisconnectSocketCallback) {
       Sockets.on(this._socket, "disconnect", this._onDisconnectSocketCallback);

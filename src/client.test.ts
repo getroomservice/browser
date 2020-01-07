@@ -83,7 +83,7 @@ test("room.restore() attempts to restore from offline", async () => {
   const client = new RoomServiceClient(URL + "/api/roomservice");
   const room = client.room("my-room");
 
-  jest.spyOn(Offline, "get").mockImplementation(async (ref, doc) => {
+  jest.spyOn(Offline, "getDoc").mockImplementation(async (ref, doc) => {
     return save(from({ name: "offlinedoc" }));
   });
 
@@ -96,7 +96,7 @@ test("room.connect() will merge online data with offline data", async () => {
   const room = client.room("my-room");
 
   // setup offline
-  jest.spyOn(Offline, "get").mockImplementation(async (ref, doc) => {
+  jest.spyOn(Offline, "getDoc").mockImplementation(async (ref, doc) => {
     return save(from({ offline: "offline" }));
   });
 
@@ -127,7 +127,7 @@ test("room.onUpdate callback tries to save the document to offline", async done 
   // @ts-ignore private; we'd normally get this from the auth endpoint
   room._roomId = "my-room-id";
 
-  const setOffline = jest.spyOn(Offline, "set");
+  const setOffline = jest.spyOn(Offline, "setDoc");
 
   onUpdateSocket!(
     JSON.stringify({

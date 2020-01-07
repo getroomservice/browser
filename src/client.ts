@@ -42,14 +42,19 @@ class RoomClient<T extends KeyValueObject> {
     this._reference = reference;
     this._authorizationUrl = authorizationUrl;
 
-    // Automerge technically supports sending multiple docs
-    // over the wire at the same time, but for simplicity's sake
-    // we just use one doc at for the moment.
-    //
-    // In the future, we may support multiple documents per room.
-    const defaultDoc = Automerge.from(state || ({} as T));
     this._docs = new Automerge.DocSet();
-    this._docs.setDoc("default", defaultDoc);
+
+    // Whenever possible, we try to use the actorId defined in storage
+    Offline.getOrCreateActor().then(id => {
+      const defaultDoc = Automerge.from(state || ({} as T), { actorId: id });
+
+      // Automerge technically supports sending multiple docs
+      // over the wire at the same time, but for simplicity's sake
+      // we just use one doc at for the moment.
+      //
+      // In the future, we may support multiple documents per room.
+      this._docs.setDoc("default", defaultDoc);
+    });
 
     this._automergeConn = new Automerge.Connection(
       this._docs,
@@ -59,7 +64,7 @@ class RoomClient<T extends KeyValueObject> {
     // We define this here so we can debounce the save function
     // Otherwise we'll get quite the performance hit
     let saveOffline = (docId: string, doc: Doc<T>) => {
-      Offline.set(this._reference, docId, save(doc));
+      Offline.setDoc(this._reference, docId, save(doc));
     };
     this._saveOffline = debounce(saveOffline, 120);
   }
@@ -118,6 +123,15 @@ class RoomClient<T extends KeyValueObject> {
       this.syncOfflineCache();
     });
 
+    // Required disconnect handler
+    Sockets.on(this._socket, "disconnect", reason => {
+      if (reason === "io server disconnect") {
+        console.warn(
+          "The RoomService client was forcibly disconnected from the server, likely due to invalid auth."
+        );
+      }
+    });
+
     /**
      * We don't require these to be defined before hand since they're
      * optional
@@ -135,6 +149,8 @@ class RoomClient<T extends KeyValueObject> {
     // Merge RoomService's online cache with what we have locally
     let state;
     try {
+      // NOTE: we purposefully don't define an actor id,
+      // since it's not assumed this state is defined by our actor.
       state = Automerge.load(room.state) as T;
       const local = await this.syncOfflineCache();
       state = merge(local, state);
@@ -187,6 +203,12 @@ class RoomClient<T extends KeyValueObject> {
         );
       }
 
+      console.log("------");
+      console.log(payload.msg);
+      // @ts-ignore private
+      console.log(this._automergeConn._theirClock);
+      console.log("------");
+
       const newDoc = this._automergeConn.receiveMsg(payload.msg);
 
       // Automerge, in it's infinite wisdom, will just return undefined
@@ -238,24 +260,18 @@ class RoomClient<T extends KeyValueObject> {
   }
 
   private async syncOfflineCache() {
-    const data = await Offline.get(this._reference, "default");
+    const data = await Offline.getDoc(this._reference, "default");
     if (!data) {
       return this._docs.getDoc("default");
     }
 
-    const offlineDoc = load<T>(data);
-    const inMemDoc = this._docs.getDoc("default");
+    // We explictly do not add
+    const offlineDoc = load<T>(data, {
+      actorId: await Offline.getOrCreateActor()
+    });
 
-    // Merge the offline doc with the current in-memory doc
-    let newDoc;
-    if (inMemDoc) {
-      newDoc = merge(inMemDoc, offlineDoc);
-    } else {
-      newDoc = offlineDoc;
-    }
-
-    this._docs.setDoc("default", newDoc);
-    return newDoc;
+    this._docs.setDoc("default", offlineDoc);
+    return offlineDoc;
   }
 
   // The automerge client will call this function when

@@ -1,6 +1,8 @@
 import Automerge, { Doc, load, merge, save } from "automerge";
 import invariant from "invariant";
 import { debounce } from "lodash";
+import { Peer } from "manymerge";
+import { Message } from "manymerge/dist/types";
 import safeJsonStringify from "safe-json-stringify";
 import authorize from "./authorize";
 import { ROOM_SERICE_SOCKET_URL } from "./constants";
@@ -13,7 +15,7 @@ interface RoomPacket {
     roomId: string;
   };
   payload: {
-    msg: Automerge.Message;
+    msg: Message;
   };
 }
 
@@ -22,12 +24,12 @@ function asRoomStr(room: RoomPacket) {
 }
 
 class RoomClient<T extends KeyValueObject> {
-  private _automergeConn: Automerge.Connection<T>;
-  private _docs: Automerge.DocSet<T>;
+  private _peer: Peer;
   private _socket?: SocketIOClient.Socket;
   private _roomId?: string;
   private readonly _reference: string;
   private readonly _authorizationUrl: string;
+  private _doc?: Doc<T>;
 
   // We define this as a local variable to make testing easier
   private _socketURL: string = ROOM_SERICE_SOCKET_URL;
@@ -41,25 +43,10 @@ class RoomClient<T extends KeyValueObject> {
   constructor(authorizationUrl: string, reference: string, state?: T) {
     this._reference = reference;
     this._authorizationUrl = authorizationUrl;
-
-    this._docs = new Automerge.DocSet();
+    this._peer = new Peer(this._sendMsgToSocket);
 
     // Whenever possible, we try to use the actorId defined in storage
-    Offline.getOrCreateActor().then(id => {
-      const defaultDoc = Automerge.from(state || ({} as T), { actorId: id });
-
-      // Automerge technically supports sending multiple docs
-      // over the wire at the same time, but for simplicity's sake
-      // we just use one doc at for the moment.
-      //
-      // In the future, we may support multiple documents per room.
-      this._docs.setDoc("default", defaultDoc);
-    });
-
-    this._automergeConn = new Automerge.Connection(
-      this._docs,
-      this._sendMsgToSocket
-    );
+    this.init(state);
 
     // We define this here so we can debounce the save function
     // Otherwise we'll get quite the performance hit
@@ -67,6 +54,25 @@ class RoomClient<T extends KeyValueObject> {
       Offline.setDoc(this._reference, docId, save(doc));
     };
     this._saveOffline = debounce(saveOffline, 120);
+  }
+
+  private async init(state?: T) {
+    if (this._doc) {
+      return this._doc;
+    }
+
+    const actorId = await Offline.getOrCreateActor();
+    const defaultDoc = Automerge.from(state || ({} as T), { actorId });
+
+    // Automerge technically supports sending multiple docs
+    // over the wire at the same time, but for simplicity's sake
+    // we just use one doc at for the moment.
+    //
+    // In the future, we may support multiple documents per room.
+    this._doc = defaultDoc;
+    this._peer.notify(this._doc);
+
+    return this._doc;
   }
 
   /**
@@ -85,6 +91,10 @@ class RoomClient<T extends KeyValueObject> {
       token: string;
     };
 
+    if (!this._doc) {
+      await this.init();
+    }
+
     try {
       const params = await authorize(this._authorizationUrl, this._reference);
       room = params.room;
@@ -93,7 +103,7 @@ class RoomClient<T extends KeyValueObject> {
       console.warn(err);
       await this.syncOfflineCache();
       return {
-        state: this._docs.getDoc("default"),
+        state: this._doc,
         reference: this._reference
       };
     }
@@ -119,7 +129,7 @@ class RoomClient<T extends KeyValueObject> {
 
     // Required connect handler
     Sockets.on(this._socket, "connect", () => {
-      this._automergeConn.open();
+      this._peer.notify(this._doc!);
       this.syncOfflineCache();
     });
 
@@ -154,7 +164,10 @@ class RoomClient<T extends KeyValueObject> {
       state = Automerge.load(room.state) as T;
       const local = await this.syncOfflineCache();
       state = merge(local, state);
-      this._docs.setDoc("default", state);
+
+      // @ts-ignore no trust me I swear
+      this._doc = state!;
+      this._peer.notify(this._doc);
     } catch (err) {
       console.error(err);
       state = {} as T;
@@ -182,7 +195,7 @@ class RoomClient<T extends KeyValueObject> {
       "It looks like you've called onUpdate multiple times. Since this can cause quite severe performance issues if used incorrectly, we're not currently supporting this behavior. If you've got a use-case we haven't thought of, file a github issue and we may change this."
     );
 
-    const socketCallback = (data: string) => {
+    const socketCallback = async (data: string) => {
       const { meta, payload } = JSON.parse(data) as RoomPacket;
 
       if (!this._roomId) {
@@ -203,13 +216,12 @@ class RoomClient<T extends KeyValueObject> {
         );
       }
 
-      console.log("------");
-      console.log(payload.msg);
-      // @ts-ignore private
-      console.log(this._automergeConn._theirClock);
-      console.log("------");
+      // This is effectively impossible tbh, but we like to be cautious
+      if (!this._doc) {
+        await this.init();
+      }
 
-      const newDoc = this._automergeConn.receiveMsg(payload.msg);
+      const newDoc = this._peer.applyMessage(payload.msg, this._doc!);
 
       // Automerge, in it's infinite wisdom, will just return undefined
       // if a message is corrupted in some way that it doesn't like.
@@ -220,10 +232,9 @@ class RoomClient<T extends KeyValueObject> {
           `Response from RoomService API seems corrupted, aborting. Response: ${data}`
         );
       }
-
-      this._saveOffline("default", newDoc);
-
-      callback(newDoc as Readonly<T>);
+      this._doc = newDoc;
+      this._saveOffline("default", this._doc);
+      callback(this._doc as Readonly<T>);
     };
 
     // If we're offline, just wait till we're back online to assign this callback
@@ -256,13 +267,16 @@ class RoomClient<T extends KeyValueObject> {
   }
 
   async state() {
-    return this._docs.getDoc("default");
+    if (!this._doc) {
+      await this.init();
+    }
+    return this._doc;
   }
 
-  private async syncOfflineCache() {
+  private async syncOfflineCache(): Promise<Doc<T>> {
     const data = await Offline.getDoc(this._reference, "default");
     if (!data) {
-      return this._docs.getDoc("default");
+      return this._doc!;
     }
 
     // We explictly do not add
@@ -270,7 +284,8 @@ class RoomClient<T extends KeyValueObject> {
       actorId: await Offline.getOrCreateActor()
     });
 
-    this._docs.setDoc("default", offlineDoc);
+    this._doc = offlineDoc;
+    this._peer.notify(this._doc);
     return offlineDoc;
   }
 
@@ -280,7 +295,7 @@ class RoomClient<T extends KeyValueObject> {
   // WARNING: This function is an arrow function specifically because
   // it needs to access this._socket. If you use a regular function,
   // it won't work.
-  private _sendMsgToSocket = (automergeMsg: Automerge.Message) => {
+  private _sendMsgToSocket = (automergeMsg: Message) => {
     // Note that this._automergeConn.open() must be called after the socket
     // definition
     invariant(
@@ -305,18 +320,16 @@ class RoomClient<T extends KeyValueObject> {
     Sockets.emit(this._socket!, "sync_room_state", asRoomStr(room));
   };
 
-  publishState(callback: (state: T) => void): T {
-    const newDoc = Automerge.change(this._docs.getDoc("default"), callback);
+  async publishState(callback: (state: T) => void): T {
+    let newDoc = Automerge.change(this._doc, callback);
+    if (!newDoc) {
+      // this happens if someone deletes the doc, so we should just reinit it.
+      newDoc = await this.init();
+    }
 
-    // Through a series of Automerge magic watchers, this call
-    // publishes the document to socket.io if we're connected.
-    //
-    // setDoc
-    //   => Automerge.DocSet fires handler set in...
-    //   => Automerge.Connection fires handler set in...
-    //   => this._sendMsgToSocket()
-    this._docs.setDoc("default", newDoc);
+    this._doc = newDoc;
     this._saveOffline("default", newDoc);
+    this._peer.notify(newDoc);
 
     return newDoc;
   }

@@ -86,7 +86,10 @@ class RoomClient<T extends KeyValueObject> {
   /**
    * Attempts to go online.
    */
-  async connect() {
+  async connect(): Promise<{
+    state: T;
+    reference: string;
+  }> {
     let room;
     let session: {
       token: string;
@@ -104,7 +107,7 @@ class RoomClient<T extends KeyValueObject> {
       console.warn(err);
       await this.syncOfflineCache();
       return {
-        state: this._doc,
+        state: this._doc!,
         reference: this._reference
       };
     }

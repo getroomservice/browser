@@ -66,7 +66,7 @@ test("room.publish() can change a document", async done => {
   await room.connect();
   sockets.emit("connect");
 
-  const newState = room.publishState(prevState => {
+  const newState = await room.publishState(prevState => {
     prevState.someOption = "hello!";
   });
 

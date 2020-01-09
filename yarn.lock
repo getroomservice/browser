@@ -552,10 +552,10 @@ atob@^2.1.2:
   resolved "https://registry.yarnpkg.com/atob/-/atob-2.1.2.tgz#6d9517eb9e030d2436666651e86bd9f6f13533c9"
   integrity sha512-Wm6ukoaOGJi/73p/cl2GvLjTI5JM1k/O14isD73YML8StrH/7/lRFgmg8nICZgD3bZZvjwCGxtMOD3wWNAu8cg==
 
-automerge-clocks@^1.0.0:
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/automerge-clocks/-/automerge-clocks-1.0.0.tgz#f1449191d942695082b22ac743700f22c40da3e4"
-  integrity sha512-h9xQH37LYKSXVHhJdBFM+LsgOXSWwKSa+/Jd5tEbFHFtE1fExTs8wzhnyC8lS8lxwHA7IPMTsqm+q4/pusfF/Q==
+automerge-clocks@1.2.0:
+  version "1.2.0"
+  resolved "https://registry.yarnpkg.com/automerge-clocks/-/automerge-clocks-1.2.0.tgz#b14a127c8206ae0cac80662855978dbba3a73b38"
+  integrity sha512-OuJSINp5Dv2qqWfuM/qhN9VajSWd+Sk19oLVR7tPih4xI+4dnu+6q6pNsCJkprx6zII/wMZPKT1olVSIcNY/RA==
 
 automerge@^0.12.1:
   version "0.12.1"
@@ -2301,13 +2301,13 @@ makeerror@1.0.x:
   dependencies:
     tmpl "1.0.x"
 
-manymerge@2.0.3:
-  version "2.0.3"
-  resolved "https://registry.yarnpkg.com/manymerge/-/manymerge-2.0.3.tgz#7f1046b0c16518c1cd694a0792e95c74a22c4d72"
-  integrity sha512-ziH486eN1gQjSO3bBl6SjMn6iIFBvVh09/ncOH1c1loQ206WIT/N1dpjpBRNHhSoF6Bdsa/QoYxgXVC1fyjOHQ==
+manymerge@2.2.0:
+  version "2.2.0"
+  resolved "https://registry.yarnpkg.com/manymerge/-/manymerge-2.2.0.tgz#4c89ccbc2cb535f79252b040cf1ef89907c5a1a9"
+  integrity sha512-zSN0xCZSv8WG6khuPjqCAq2j0d+cQZeuZT6QkLHCrcziAnN4xRyPooOxRZh07J/Vt3XvFN6BjXR0RPiJxDsqpw==
   dependencies:
     "@types/events" "^3.0.0"
-    automerge-clocks "^1.0.0"
+    automerge-clocks "1.2.0"
     invariant "^2.2.4"
 
 map-cache@^0.2.2:

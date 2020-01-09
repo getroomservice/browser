@@ -1,4 +1,5 @@
 import Automerge, { Doc, load, merge, save } from "automerge";
+import { Map } from "immutable";
 import invariant from "invariant";
 import { debounce } from "lodash";
 import { Peer } from "manymerge";
@@ -221,6 +222,9 @@ class RoomClient<T extends KeyValueObject> {
         await this.init();
       }
 
+      // convert the payload clock to a map
+      payload.msg.clock = Map(payload.msg.clock);
+
       const newDoc = this._peer.applyMessage(payload.msg, this._doc!);
 
       // Automerge, in it's infinite wisdom, will just return undefined
@@ -296,12 +300,10 @@ class RoomClient<T extends KeyValueObject> {
   // it needs to access this._socket. If you use a regular function,
   // it won't work.
   private _sendMsgToSocket = (automergeMsg: Message) => {
-    // Note that this._automergeConn.open() must be called after the socket
-    // definition
-    invariant(
-      !!this._socket,
-      "Expected this._socket to be defined. This is a sign of a broken client, if you're seeing this, please contact us."
-    );
+    // we're offline, so don't do anything
+    if (!this._socket) {
+      return;
+    }
 
     invariant(
       this._roomId,
@@ -320,7 +322,7 @@ class RoomClient<T extends KeyValueObject> {
     Sockets.emit(this._socket!, "sync_room_state", asRoomStr(room));
   };
 
-  async publishState(callback: (state: T) => void): T {
+  async publishState(callback: (state: T) => void): Promise<T> {
     let newDoc = Automerge.change(this._doc, callback);
     if (!newDoc) {
       // this happens if someone deletes the doc, so we should just reinit it.

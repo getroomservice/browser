@@ -325,6 +325,11 @@ export default class RoomClient<T extends KeyValueObject> {
   };
 
   publishDoc(callback: (state: T) => void): T {
+    if (!this._doc) {
+      console.error("Attempting to call publishDoc .init() has finished.");
+      return {} as T;
+    }
+
     let newDoc = Automerge.change(this._doc, callback);
 
     if (!newDoc) {

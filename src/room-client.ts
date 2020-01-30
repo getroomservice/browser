@@ -330,6 +330,10 @@ export default class RoomClient<T extends KeyValueObject> {
       return {} as T;
     }
 
+    if (typeof callback !== "function") {
+      throw new Error(`room.publishDoc expects a function.`);
+    }
+
     let newDoc = Automerge.change(this._doc, callback);
 
     if (!newDoc) {

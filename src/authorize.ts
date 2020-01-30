@@ -11,9 +11,8 @@ export default async function authorize(
   authorizationUrl: string,
   roomReference: string
 ) {
-  // Generates and then records a session cookie.
+  // Generates and then records a session token
   const result = await ky.post(authorizationUrl, {
-    credentials: "include",
     json: {
       room: {
         reference: roomReference

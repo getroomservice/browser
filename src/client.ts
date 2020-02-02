@@ -8,10 +8,11 @@ export default class RoomServiceClient {
     this._authorizationUrl = parameters.authUrl;
   }
 
-  room<T extends KeyValueObject>(roomReference: string) {
+  room<T extends KeyValueObject>(roomReference: string, state?: T) {
     return new RoomClient<T>({
       authUrl: this._authorizationUrl,
-      reference: roomReference
+      reference: roomReference,
+      state
     });
   }
 }

@@ -14,8 +14,27 @@ interface IOffline {
 }
 
 const Offline: IOffline = {
-  getDoc: (roomRef, docId) => get("rs:" + roomRef + "/" + docId),
-  setDoc: (roomRef, docId, value) => set("rs:" + roomRef + "/" + docId, value),
+  getDoc: async (roomRef, docId) => {
+    try {
+      return await get("rs:" + roomRef + "/" + docId);
+    } catch (err) {
+      console.warn(
+        "Something went wrong getting Room Service's state offline",
+        err
+      );
+      return "";
+    }
+  },
+  setDoc: async (roomRef, docId, value) => {
+    try {
+      await set("rs:" + roomRef + "/" + docId, value);
+    } catch (err) {
+      console.warn(
+        "Something went wrong saving Room Service's state offline",
+        err
+      );
+    }
+  },
   getOrCreateActor: async () => {
     const actor = await get("rs:actor");
     if (actor) {

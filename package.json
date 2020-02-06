@@ -24,7 +24,8 @@
     "jest": "^24.9.0",
     "nock": "^11.7.0",
     "ts-jest": "^24.2.0",
-    "typescript": "^3.7.3"
+    "tslib": "^1.10.0",
+    "typescript": "^3.7.5"
   },
   "dependencies": {
     "automerge": "^0.12.1",

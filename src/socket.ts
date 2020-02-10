@@ -20,7 +20,7 @@ const Sockets = {
 
   emit(
     socket: SocketIOClient.Socket,
-    event: "sync_room_state",
+    event: "sync_room_state" | "update_presence",
     ...args: any[]
   ) {
     socket.emit(event, ...args);

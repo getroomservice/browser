@@ -295,8 +295,7 @@ export default class RoomClient<T extends KeyValueObject> {
     return offlineDoc;
   }
 
-  // The automerge client will call this function when
-  // it picks up changes from the docset.
+  // The manymerge client will call this function when it picks up changes.
   //
   // WARNING: This function is an arrow function specifically because
   // it needs to access this._socket. If you use a regular function,

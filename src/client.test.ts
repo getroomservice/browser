@@ -72,7 +72,7 @@ test("room.publish() can change a document", async () => {
   await room.init();
   sockets.emit("connect");
 
-  const newState = await room.publishDoc(prevState => {
+  const newState = await room.setDoc((prevState: any) => {
     prevState.someOption = "hello!";
   });
 
@@ -122,10 +122,10 @@ test("room.onUpdateDoc callback tries to save the document to offline", async do
   const room = client.room("my-room");
 
   const cb = jest.fn();
-  room.onUpdateDoc(cb);
+  room.onSetDoc(cb);
 
   // @ts-ignore private
-  const onUpdateSocket = room._onUpdateSocketCallback;
+  const onUpdateSocket = room._docClient._onUpdateSocketCallback;
   expect(onUpdateSocket).toBeTruthy();
 
   await room.init();

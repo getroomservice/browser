@@ -1,6 +1,8 @@
 import DocClient from "./doc-client";
 import PresenceClient from "./presence-client";
 import { Obj } from "./types";
+import authorize from "./authorize";
+import { throttle } from "lodash";
 
 interface RoomClientParameters {
   authUrl: string;
@@ -11,21 +13,62 @@ interface RoomClientParameters {
 export default class RoomClient {
   private readonly _docClient: DocClient<Obj>;
   private readonly _presenceClient: PresenceClient;
+  private readonly _authorizationUrl: string;
+  private readonly _roomReference: string;
 
   constructor(parameters: RoomClientParameters) {
     this._docClient = new DocClient(parameters);
     this._presenceClient = new PresenceClient(parameters);
+    this._authorizationUrl = parameters.authUrl;
+    this._roomReference = parameters.roomReference;
   }
 
   // used for testing locally
   private set _socketURL(url: string) {
     this._docClient._socketURL = url;
+    this._presenceClient._socketURL = url;
   }
 
+  private _init = throttle(
+    async () => {
+      let room;
+      let session;
+      try {
+        const params = await authorize(
+          this._authorizationUrl,
+          this._roomReference
+        );
+        room = params.room;
+        session = params.session;
+      } catch (err) {
+        console.warn(err);
+      }
+
+      // Presence client
+      this._presenceClient.init({
+        room,
+        session
+      });
+
+      // Doc client
+      const { doc } = await this._docClient.init({
+        room,
+        session
+      });
+
+      return { doc };
+    },
+    100,
+    {
+      leading: true
+    }
+  );
+
   // Start the client, sync from cache, and connect.
+  // This function is throttled at 100ms, since it's only
+  // supposed to be called once, but
   async init() {
-    const { doc } = await this._docClient.init();
-    return { doc };
+    return this._init();
   }
 
   // Manually restore from cache
@@ -54,6 +97,12 @@ export default class RoomClient {
   }
 
   // Presence
-  setPresence<P extends Obj>(key: string, value: P) {}
-  onSetPresence<P extends Obj>(key: string, callback: (value: P) => void) {}
+  setPresence<P extends Obj>(key: string, value: P) {
+    this._presenceClient.setPresence(key, value);
+  }
+  onSetPresence<P extends Obj>(
+    callback: (id: string, key: string, value: P) => void
+  ) {
+    this._presenceClient.onSetPresence(callback);
+  }
 }

@@ -1,5 +1,5 @@
 import RoomClient from "./room-client";
-import { KeyValueObject } from "./types";
+import { Obj } from "./types";
 
 export default class RoomServiceClient {
   private readonly _authorizationUrl: string;
@@ -8,11 +8,11 @@ export default class RoomServiceClient {
     this._authorizationUrl = parameters.authUrl;
   }
 
-  room<T extends KeyValueObject>(roomReference: string, state?: T) {
-    return new RoomClient<T>({
+  room<T extends Obj>(roomReference: string, defaultDoc?: T) {
+    return new RoomClient({
       authUrl: this._authorizationUrl,
-      reference: roomReference,
-      state
+      roomReference,
+      defaultDoc
     });
   }
 }

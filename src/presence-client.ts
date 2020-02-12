@@ -1,6 +1,8 @@
 import Sockets from "./socket";
 import { ROOM_SERICE_SOCKET_URL } from "./constants";
 import invariant from "invariant";
+import { Room, Session } from "./types";
+import { throttle } from "lodash";
 
 const PRESENCE_NAMESPACE = "/v1/presence";
 
@@ -8,6 +10,7 @@ interface PresencePacket<T> {
   meta: {
     roomId: string;
     guestId?: string;
+    connectionId?: string;
 
     // The "key". ex: "cursors", "keyboard", "location"
     namespace: string;
@@ -30,12 +33,22 @@ function isParsable(val: any) {
   return typeof val === "object" && val !== null;
 }
 
+const rateLimittedEmit = throttle(
+  (
+    socket: SocketIOClient.Socket,
+    event: "sync_room_state" | "update_presence",
+    ...args: any[]
+  ) => Sockets.emit(socket, event, ...args),
+  10,
+  { leading: true }
+);
+
 export default class PresenceClient {
   // We define this as a local variable to make testing easier
   _socketURL: string;
   _authorizationUrl: string;
   _roomReference: string;
-  _roomId: string;
+  _roomId?: string;
   private _socket?: SocketIOClient.Socket;
 
   constructor(parameters: { authUrl: string; roomReference: string }) {
@@ -44,7 +57,12 @@ export default class PresenceClient {
     this._roomReference = parameters.roomReference;
   }
 
-  init({ room, session }) {
+  init({ room, session }: { room?: Room; session?: Session }) {
+    if (!room || !session) {
+      console.error("Offline in init");
+      return;
+    }
+
     this._roomId = room.id;
     this._socket = Sockets.newSocket(this._socketURL + PRESENCE_NAMESPACE, {
       transportOptions: {
@@ -60,6 +78,7 @@ export default class PresenceClient {
   setPresence<P>(key: string, value: P, options?: PresenceOptions) {
     // Offline do nothing
     if (!this._socket) {
+      console.warn("offline");
       return;
     }
     invariant(
@@ -93,12 +112,13 @@ export default class PresenceClient {
       payload: value
     };
 
-    Sockets.emit(this._socket, "update_presence", packet);
+    rateLimittedEmit(this._socket, "update_presence", packet);
   }
 
-  onSetPresence<P>(callback: (key: string, value: P) => void) {
+  onSetPresence<P>(callback: (id: string, key: string, value: P) => void) {
     // Offline do nothing
     if (!this._socket) {
+      console.warn("offline");
       return;
     }
 
@@ -109,8 +129,13 @@ export default class PresenceClient {
           "Expected a _roomId to be defined before we invoked the the onSetPresence callback. This is a sign of a broken client, please contact us if you're seeing this."
         );
       }
+      if (!meta.connectionId) {
+        console.error(
+          "Unexpectedly got a packet without a connection id. We're skipping this for now, but this could be a sign of a service outage or a broken client."
+        );
+      }
 
-      callback(meta.namespace, payload);
+      callback(meta.connectionId!, meta.namespace, payload);
     });
   }
 }

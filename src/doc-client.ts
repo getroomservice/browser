@@ -9,7 +9,7 @@ import authorize from "./authorize";
 import { ROOM_SERICE_SOCKET_URL } from "./constants";
 import Offline from "./offline";
 import Sockets from "./socket";
-import { Obj } from "./types";
+import { Obj, Room, Session } from "./types";
 
 interface RoomPacket {
   meta: {
@@ -100,29 +100,21 @@ export default class DocClient<T extends Obj> {
   /**
    * Attempts to go online.
    */
-  async init(): Promise<{
+  async init({
+    room,
+    session
+  }: {
+    room?: Room;
+    session?: Session;
+  }): Promise<{
     doc: T;
-
-    // TODO: we'll eventually return the users in the room as well here.
   }> {
-    let room;
-    let session: {
-      token: string;
-    };
-
     if (!this._doc) {
       await this.readActorIdThenCreateDoc();
     }
 
-    try {
-      const params = await authorize(
-        this._authorizationUrl,
-        this._roomReference
-      );
-      room = params.room;
-      session = params.session;
-    } catch (err) {
-      console.warn(err);
+    // we're offline, so we should just continue with our fun little world
+    if (!room || !session) {
       await this.syncOfflineCache();
       return {
         doc: this._doc! as T
@@ -144,8 +136,12 @@ export default class DocClient<T extends Obj> {
      * Errors
      */
     Sockets.on(this._socket, "error", (data: string) => {
-      const { message } = JSON.parse(data);
-      console.error(`Error from Socket: ${message}`);
+      try {
+        const { message } = JSON.parse(data);
+        console.error(`Error from Socket: ${message}`);
+      } catch (err) {
+        console.error(`Unparsable error from socket: ${data}`);
+      }
     });
 
     // Required connect handler

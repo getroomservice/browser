@@ -6,6 +6,23 @@ import { throttle } from "lodash";
 
 const PRESENCE_NAMESPACE = "/v1/presence";
 
+export interface PresenceMeta {
+  roomId: string;
+  guest?: {
+    reference: string;
+  };
+  connectionId?: string;
+
+  // The "key". ex: "cursors", "keyboard", "location"
+  namespace: string;
+
+  // Time to live, measured in seconds. 0 means don't store
+  ttl: number;
+
+  // new Date().getTime(); measured in seconds.
+  createdAt: number;
+}
+
 interface PresencePacket<T> {
   meta: {
     roomId: string;
@@ -39,7 +56,7 @@ const rateLimittedEmit = throttle(
     event: "sync_room_state" | "update_presence",
     ...args: any[]
   ) => Sockets.emit(socket, event, ...args),
-  10,
+  50,
   { leading: true }
 );
 
@@ -86,7 +103,7 @@ export default class PresenceClient {
       "setPresence is missing a roomId, this is likely a bug with the client. If you're seeing this, please contact us."
     );
 
-    const ttl = options?.ttl || 30;
+    const ttl = options?.ttl || 1000 * 2;
 
     if (!value) {
       console.error(
@@ -115,7 +132,7 @@ export default class PresenceClient {
     rateLimittedEmit(this._socket, "update_presence", packet);
   }
 
-  onSetPresence<P>(callback: (id: string, key: string, value: P) => void) {
+  onSetPresence<P>(callback: (meta: PresenceMeta, value: P) => void) {
     // Offline do nothing
     if (!this._socket) {
       console.warn("offline");
@@ -135,7 +152,12 @@ export default class PresenceClient {
         );
       }
 
-      callback(meta.connectionId!, meta.namespace, payload);
+      // Don't include self
+      if (meta.connectionId === this._socket!.id) {
+        return;
+      }
+
+      callback(meta, payload);
     });
   }
 }

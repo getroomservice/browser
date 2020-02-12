@@ -1,5 +1,5 @@
 import DocClient from "./doc-client";
-import PresenceClient from "./presence-client";
+import PresenceClient, { PresenceMeta } from "./presence-client";
 import { Obj } from "./types";
 import authorize from "./authorize";
 import { throttle } from "lodash";
@@ -101,7 +101,7 @@ export default class RoomClient {
     this._presenceClient.setPresence(key, value);
   }
   onSetPresence<P extends Obj>(
-    callback: (id: string, key: string, value: P) => void
+    callback: (meta: PresenceMeta, value: P) => void
   ) {
     this._presenceClient.onSetPresence(callback);
   }

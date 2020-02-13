@@ -93,6 +93,12 @@ test("room.restore() attempts to restore from offline", async () => {
   });
   const room = client.room("my-room");
 
+  // @ts-ignore because trust me typescript, I am very wise and have
+  // been on this earth longer than thee, and I, the great programmer,
+  // know for certain that window.indexDB is, in fact, equal to
+  // wiggly-woggle-pop.
+  window.indexedDB = "wiggly-woggle-pop";
+
   jest.spyOn(Offline, "getDoc").mockImplementation(async (ref, doc) => {
     return save(from({ name: "offlinedoc" }));
   });

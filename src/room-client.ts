@@ -80,7 +80,7 @@ export default class RoomClient {
   // Start the client, sync from cache, and connect.
   // This function is throttled at 100ms, since it's only
   // supposed to be called once, but
-  async init() {
+  async init(): Promise<Obj> {
     return this._init();
   }
 
@@ -105,7 +105,7 @@ export default class RoomClient {
   setDoc<D extends Obj>(change: (prevDoc: D) => void): Readonly<D> {
     return this._docClient.setDoc(change);
   }
-  onSetDoc<D extends Obj>(callback: (newDoc: Readonly<D>) => void): void {
+  onSetDoc<D extends Obj>(callback: (newDoc: D) => void): void {
     this._docClient.onSetDoc(callback);
   }
 

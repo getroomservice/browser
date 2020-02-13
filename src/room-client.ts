@@ -103,7 +103,9 @@ export default class RoomClient {
   }
 
   // Documents
-  setDoc<D extends Obj>(change: (prevDoc: D) => void): Readonly<D> {
+  async setDoc<D extends Obj>(
+    change: (prevDoc: D) => void
+  ): Promise<Readonly<D>> {
     return this._docClient.setDoc(change);
   }
   onSetDoc<D extends Obj>(callback: (newDoc: D) => void): void {

@@ -371,15 +371,14 @@ export default class DocClient<T extends Obj> {
     Sockets.emit(this._socket, "sync_room_state", asRoomStr(room));
   };
 
-  setDoc<D>(callback: (state: D) => void): any {
+  async setDoc<D>(callback: (state: D) => void): Promise<D> {
     if (typeof window === "undefined") {
       console.warn("Attempting to call setDoc on the server, this is a no-op.");
       return {} as D;
     }
 
     if (!this._doc) {
-      console.error("Attempting to call publishDoc .init() has finished.");
-      return {} as D;
+      this._doc = await this.readActorIdThenCreateDoc();
     }
 
     if (typeof callback !== "function") {
@@ -402,6 +401,6 @@ export default class DocClient<T extends Obj> {
     this._saveOffline("default", newDoc);
     this._peer.notify(newDoc);
 
-    return newDoc;
+    return newDoc as D;
   }
 }

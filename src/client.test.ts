@@ -4,6 +4,7 @@ import RoomServiceClient from "./client";
 import Offline from "./offline";
 import Sockets from "./socket";
 import { injectFakeSocket } from "./test-socket";
+import { uniq } from "lodash";
 
 const URL = "https://coolsite.com";
 jest.mock("idb-keyval");
@@ -50,12 +51,19 @@ test("room gets called with bearer token", async () => {
   });
   const room = client.room("my-room");
   await room.init();
-  const [url, args] = mock.calls[0];
 
-  expect(url).toBe("https://api.roomservice.dev");
+  const urls = mock.calls.map(([url]) => url);
+  const args = mock.calls.map(([_, args]) => args);
+
+  expect(uniq(urls.sort())).toStrictEqual(
+    [
+      "https://api.roomservice.dev",
+      "https://api.roomservice.dev/v1/presence"
+    ].sort()
+  );
 
   // @ts-ignore because bad typings make me sad
-  expect(args.transportOptions!.polling.extraHeaders.authorization).toBe(
+  expect(args[0].transportOptions.polling.extraHeaders.authorization).toBe(
     "Bearer short-lived-token"
   );
 });

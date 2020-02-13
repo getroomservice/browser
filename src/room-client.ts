@@ -44,6 +44,19 @@ export default class RoomClient {
         console.warn(err);
       }
 
+      // We're on the server, so we shouldn't init, because we don't need
+      // to connect to the clients.
+      if (typeof window === "undefined") {
+        // This would signal that the server side can't access the auth endpoint
+        if (!room) {
+          throw new Error(
+            "Room Service can't access the auth endpoint on the server. More details: https://err.sh/getroomservice/browser/server-side-no-network"
+          );
+        }
+
+        return { doc: room?.state };
+      }
+
       // Presence client
       this._presenceClient.init({
         room,

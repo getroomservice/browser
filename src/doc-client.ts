@@ -52,8 +52,11 @@ export default class DocClient<T extends Obj> {
     this._peer = new Peer(this._sendMsgToSocket);
     this._socketURL = ROOM_SERICE_SOCKET_URL;
 
-    // Whenever possible, we try to use the actorId defined in storage
-    this.readActorIdThenCreateDoc(parameters.defaultDoc);
+    // Only read from actorid in the browser
+    if (typeof window !== "undefined") {
+      // Whenever possible, we try to use the actorId defined in storage
+      this.readActorIdThenCreateDoc(parameters.defaultDoc);
+    }
 
     // We define this here so we can debounce the save function
     // Otherwise we'll get quite the performance hit

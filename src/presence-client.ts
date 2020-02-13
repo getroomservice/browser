@@ -56,7 +56,7 @@ const rateLimittedEmit = throttle(
     event: "sync_room_state" | "update_presence",
     ...args: any[]
   ) => Sockets.emit(socket, event, ...args),
-  50,
+  40,
   { leading: true }
 );
 

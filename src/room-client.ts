@@ -30,13 +30,14 @@ export default class RoomClient {
   }
 
   private _init = throttle(
-    async () => {
+    async (options?: { headers?: Headers }) => {
       let room;
       let session;
       try {
         const params = await authorize(
           this._authorizationUrl,
-          this._roomReference
+          this._roomReference,
+          options?.headers
         );
         room = params.room;
         session = params.session;
@@ -80,8 +81,8 @@ export default class RoomClient {
   // Start the client, sync from cache, and connect.
   // This function is throttled at 100ms, since it's only
   // supposed to be called once, but
-  async init(): Promise<Obj> {
-    return this._init();
+  async init(options?: { headers?: Headers }): Promise<Obj> {
+    return this._init(options);
   }
 
   // Manually restore from cache

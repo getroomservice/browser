@@ -49,3 +49,24 @@ room.onUpdate(newDoc => {
   console.log(newDoc);
 });
 ```
+
+## Server Side Rendering
+
+To render on the server, you must include any headers that should be passed along to your
+auth endpoint. In most cases, this is just your session cookie.
+
+For example, in Next.js:
+
+```ts
+const room = client.room("my-room");
+
+MyComponent.getInitialProps = async ctx => {
+  const { doc } = await room.init({
+    headers: {
+      cookie: ctx.req.headers
+    }
+  });
+
+  return { doc };
+};
+```

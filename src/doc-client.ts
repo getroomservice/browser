@@ -5,7 +5,6 @@ import { debounce } from "lodash";
 import { Peer } from "manymerge";
 import { Message } from "manymerge/dist/types";
 import safeJsonStringify from "safe-json-stringify";
-import authorize from "./authorize";
 import { ROOM_SERICE_SOCKET_URL } from "./constants";
 import Offline from "./offline";
 import Sockets from "./socket";
@@ -23,6 +22,20 @@ interface RoomPacket {
 function asRoomStr(room: RoomPacket) {
   return safeJsonStringify(room);
 }
+
+/**
+ * // Init
+ * if (onServer) {
+ *   if (!ctx) throw new Error();
+ *
+ *   const { doc } = authorize(url, ctx)
+ *   return { doc }
+ * }
+ *
+ * // setDoc and onSetDoc are noops on the server.
+ *
+ *
+ */
 
 export default class DocClient<T extends Obj> {
   private readonly _peer: Peer;
@@ -52,12 +65,6 @@ export default class DocClient<T extends Obj> {
     this._peer = new Peer(this._sendMsgToSocket);
     this._socketURL = ROOM_SERICE_SOCKET_URL;
 
-    // Only read from actorid in the browser
-    if (typeof window !== "undefined") {
-      // Whenever possible, we try to use the actorId defined in storage
-      this.readActorIdThenCreateDoc(parameters.defaultDoc);
-    }
-
     // We define this here so we can debounce the save function
     // Otherwise we'll get quite the performance hit
     let saveOffline = (docId: string, doc: Doc<T>) => {
@@ -69,6 +76,7 @@ export default class DocClient<T extends Obj> {
   private async readActorIdThenCreateDoc(state?: T) {
     const actorId = await Offline.getOrCreateActor();
     this._actorId = actorId;
+
     return this.createDoc(actorId, state);
   }
 
@@ -117,6 +125,12 @@ export default class DocClient<T extends Obj> {
   }): Promise<{
     doc: T;
   }> {
+    // If we're server side, we skip everything else
+    // and just return the most recent state of the doc.
+    if (typeof window === "undefined") {
+      return { doc: room?.state };
+    }
+
     if (!this._doc) {
       await this.readActorIdThenCreateDoc();
     }
@@ -205,6 +219,13 @@ export default class DocClient<T extends Obj> {
    * Manually goes offline
    */
   disconnect() {
+    if (typeof window === "undefined") {
+      console.warn(
+        "Attempting to call disconnect on the server, this is a no-op."
+      );
+      return;
+    }
+
     if (this._socket) {
       Sockets.disconnect(this._socket);
     }
@@ -212,6 +233,13 @@ export default class DocClient<T extends Obj> {
   }
 
   onSetDoc(callback: (state: Readonly<any>) => any) {
+    if (typeof window === "undefined") {
+      console.warn(
+        "Attempting to call onSetDoc on the server, this is a no-op."
+      );
+      return;
+    }
+
     invariant(
       !this._onUpdateSocketCallback,
       "It looks like you've called onSetDoc multiple times. Since this can cause quite severe performance issues if used incorrectly, we're not currently supporting this behavior. If you've got a use-case we haven't thought of, file a github issue and we may change this."
@@ -272,6 +300,13 @@ export default class DocClient<T extends Obj> {
   }
 
   onConnect(callback: () => any) {
+    if (typeof window === "undefined") {
+      console.warn(
+        "Attempting to call onConnect on the server, this is a no-op."
+      );
+      return;
+    }
+
     // If we're offline, cue this up for later.
     if (!this._socket) {
       this._onConnectSocketCallback = callback;
@@ -282,6 +317,13 @@ export default class DocClient<T extends Obj> {
   }
 
   onDisconnect(callback: () => any) {
+    if (typeof window === "undefined") {
+      console.warn(
+        "Attempting to call onDisconnect on the server, this is a no-op."
+      );
+      return;
+    }
+
     // If we're offline, cue this up for later.
     if (!this._socket) {
       this._onDisconnectSocketCallback = callback;
@@ -343,6 +385,11 @@ export default class DocClient<T extends Obj> {
   };
 
   setDoc<D>(callback: (state: D) => void): any {
+    if (typeof window === "undefined") {
+      console.warn("Attempting to call setDoc on the server, this is a no-op.");
+      return {} as D;
+    }
+
     if (!this._doc) {
       console.error("Attempting to call publishDoc .init() has finished.");
       return {} as D;

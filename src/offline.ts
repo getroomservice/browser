@@ -6,11 +6,12 @@
 
 import { get, set } from "idb-keyval";
 import uuid from "uuid/v4";
+import invariant from "invariant";
 
 interface IOffline {
   getDoc: (roomRef: string, docId: string) => Promise<string>;
   setDoc: (roomRef: string, docId: string, value: string) => Promise<any>;
-  getOrCreateActor: () => Promise<string | false>;
+  getOrCreateActor: () => Promise<string>;
 }
 
 const Offline: IOffline = {
@@ -36,19 +37,19 @@ const Offline: IOffline = {
     }
   },
   getOrCreateActor: async () => {
-    try {
-      const actor = await get("rs:actor");
-      if (actor) {
-        return actor as string;
-      }
+    invariant(
+      typeof window !== "undefined",
+      "getOrCreateActor was used on the server side; this is a bug in the client, if you're seeing this, let us know."
+    );
 
-      const id = uuid();
-      set("rs:actor", id);
-      return id;
-    } catch (err) {
-      console.warn(err);
-      return false;
+    const actor = await get("rs:actor");
+    if (actor) {
+      return actor as string;
     }
+
+    const id = uuid();
+    set("rs:actor", id);
+    return id;
   }
 };
 

@@ -297,9 +297,16 @@ export default class DocClient<T extends Obj> {
       return this._doc!;
     }
 
+    const actorId = await Offline.getOrCreateActor();
+    if (!actorId) {
+      console.error(
+        "Unexpectedly didn't find offline support in an environment like a browser where we should have offline support."
+      );
+    }
+
     // We explictly do not add
     const offlineDoc = load<T>(data, {
-      actorId: await Offline.getOrCreateActor()
+      actorId
     });
 
     this._doc = offlineDoc;

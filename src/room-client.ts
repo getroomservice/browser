@@ -42,6 +42,9 @@ export default class RoomClient {
         room = params.room;
         session = params.session;
       } catch (err) {
+        console.error(
+          "Room Service can't access the auth endpoint. More details: https://err.sh/getroomservice/browser/cant-access-auth-endpoint"
+        );
         console.warn(err);
       }
 

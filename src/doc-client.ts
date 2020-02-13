@@ -88,8 +88,9 @@ export default class DocClient<T extends Obj> {
    * Manually attempt to restore the state from offline storage.
    */
   async restore(): Promise<any> {
-    // We can't restore on the server.
-    if (typeof window === "undefined") {
+    // We can't restore on the server, or in environments
+    // where indexedb is not defined
+    if (typeof window === "undefined" || typeof indexedDB === "undefined") {
       return {};
     }
 

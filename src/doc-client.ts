@@ -23,20 +23,6 @@ function asRoomStr(room: RoomPacket) {
   return safeJsonStringify(room);
 }
 
-/**
- * // Init
- * if (onServer) {
- *   if (!ctx) throw new Error();
- *
- *   const { doc } = authorize(url, ctx)
- *   return { doc }
- * }
- *
- * // setDoc and onSetDoc are noops on the server.
- *
- *
- */
-
 export default class DocClient<T extends Obj> {
   private readonly _peer: Peer;
   private readonly _roomReference: string;

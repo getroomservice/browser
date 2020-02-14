@@ -57,7 +57,7 @@ test("room gets called with bearer token", async () => {
 
   expect(uniq(urls.sort())).toStrictEqual(
     [
-      "https://api.roomservice.dev",
+      "https://api.roomservice.dev/v1/doc",
       "https://api.roomservice.dev/v1/presence"
     ].sort()
   );

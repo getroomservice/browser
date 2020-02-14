@@ -7,6 +7,7 @@ import { throttle } from "lodash";
 interface RoomClientParameters {
   authUrl: string;
   roomReference: string;
+  headers?: Headers;
   defaultDoc?: Obj;
 }
 
@@ -15,12 +16,14 @@ export default class RoomClient {
   private readonly _presenceClient: PresenceClient;
   private readonly _authorizationUrl: string;
   private readonly _roomReference: string;
+  private readonly _headers?: Headers;
 
   constructor(parameters: RoomClientParameters) {
     this._docClient = new DocClient(parameters);
     this._presenceClient = new PresenceClient(parameters);
     this._authorizationUrl = parameters.authUrl;
     this._roomReference = parameters.roomReference;
+    this._headers = parameters.headers;
   }
 
   // used for testing locally
@@ -30,14 +33,14 @@ export default class RoomClient {
   }
 
   private _init = throttle(
-    async (options?: { headers?: Headers }) => {
+    async () => {
       let room;
       let session;
       try {
         const params = await authorize(
           this._authorizationUrl,
           this._roomReference,
-          options?.headers
+          this._headers
         );
         room = params.room;
         session = params.session;
@@ -84,8 +87,8 @@ export default class RoomClient {
   // Start the client, sync from cache, and connect.
   // This function is throttled at 100ms, since it's only
   // supposed to be called once, but
-  async init(options?: { headers?: Headers }): Promise<Obj> {
-    return this._init(options);
+  async init(): Promise<Obj> {
+    return this._init();
   }
 
   // Manually restore from cache

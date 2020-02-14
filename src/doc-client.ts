@@ -10,6 +10,8 @@ import Offline from "./offline";
 import Sockets from "./socket";
 import { Obj, Room, Session } from "./types";
 
+const DOC_NAMESPACE = "/v1/doc";
+
 interface RoomPacket {
   meta: {
     roomId: string;
@@ -131,7 +133,7 @@ export default class DocClient<T extends Obj> {
     }
 
     this._roomId = room.id;
-    this._socket = Sockets.newSocket(this._socketURL, {
+    this._socket = Sockets.newSocket(this._socketURL + DOC_NAMESPACE, {
       transportOptions: {
         polling: {
           extraHeaders: {

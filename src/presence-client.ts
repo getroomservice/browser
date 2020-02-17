@@ -76,7 +76,7 @@ export default class PresenceClient {
 
   init({ room, session }: { room?: Room; session?: Session }) {
     if (!room || !session) {
-      console.error("Offline in init");
+      console.warn("Room Service is offline.");
       return;
     }
 
@@ -95,7 +95,6 @@ export default class PresenceClient {
   setPresence<P>(key: string, value: P, options?: PresenceOptions) {
     // Offline do nothing
     if (!this._socket) {
-      console.warn("offline");
       return;
     }
     invariant(

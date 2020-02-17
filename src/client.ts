@@ -1,11 +1,11 @@
 import RoomClient from "./room-client";
 import { Obj } from "./types";
 
-const RoomPool: { [key: string]: RoomClient } = {};
-
 export default class RoomServiceClient {
   private readonly _authorizationUrl: string;
   private readonly _headers?: Headers;
+
+  private readonly _roomPool: { [key: string]: RoomClient } = {};
 
   constructor(parameters: { authUrl: string; headers?: Headers }) {
     this._authorizationUrl = parameters.authUrl;
@@ -13,8 +13,8 @@ export default class RoomServiceClient {
   }
 
   room<T extends Obj>(roomReference: string, defaultDoc?: T) {
-    if (RoomPool[roomReference]) {
-      return RoomPool[roomReference];
+    if (this._roomPool[roomReference]) {
+      return this._roomPool[roomReference];
     }
 
     const room = new RoomClient({
@@ -24,7 +24,7 @@ export default class RoomServiceClient {
       headers: this._headers
     });
 
-    RoomPool[roomReference] = room;
+    this._roomPool[roomReference] = room;
     return room;
   }
 }

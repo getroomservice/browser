@@ -1,6 +1,8 @@
 import RoomClient from "./room-client";
 import { Obj } from "./types";
 
+const RoomPool: { [key: string]: RoomClient } = {};
+
 export default class RoomServiceClient {
   private readonly _authorizationUrl: string;
   private readonly _headers?: Headers;
@@ -11,11 +13,18 @@ export default class RoomServiceClient {
   }
 
   room<T extends Obj>(roomReference: string, defaultDoc?: T) {
-    return new RoomClient({
+    if (RoomPool[roomReference]) {
+      return RoomPool[roomReference];
+    }
+
+    const room = new RoomClient({
       authUrl: this._authorizationUrl,
       roomReference,
       defaultDoc,
       headers: this._headers
     });
+
+    RoomPool[roomReference] = room;
+    return room;
   }
 }

@@ -9,7 +9,8 @@ interface RoomValue {
 
 export default async function authorize(
   authorizationUrl: string,
-  roomReference: string
+  roomReference: string,
+  headers?: Headers
 ) {
   // Generates and then records a session token
   const result = await ky.post(authorizationUrl, {
@@ -18,6 +19,8 @@ export default async function authorize(
         reference: roomReference
       }
     },
+
+    headers: headers || undefined,
 
     // This only works on sites that have setup DNS,
     // or the debugger on roomservice.dev/app, which

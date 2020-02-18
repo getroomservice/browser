@@ -4,6 +4,7 @@ import RoomServiceClient from "./client";
 import Offline from "./offline";
 import Sockets from "./socket";
 import { injectFakeSocket } from "./test-socket";
+import { uniq } from "lodash";
 
 const URL = "https://coolsite.com";
 jest.mock("idb-keyval");
@@ -50,12 +51,19 @@ test("room gets called with bearer token", async () => {
   });
   const room = client.room("my-room");
   await room.init();
-  const [url, args] = mock.calls[0];
 
-  expect(url).toBe("https://api.roomservice.dev");
+  const urls = mock.calls.map(([url]) => url);
+  const args = mock.calls.map(([_, args]) => args);
+
+  expect(uniq(urls.sort())).toStrictEqual(
+    [
+      "https://api.roomservice.dev/v1/doc",
+      "https://api.roomservice.dev/v1/presence"
+    ].sort()
+  );
 
   // @ts-ignore because bad typings make me sad
-  expect(args.transportOptions!.polling.extraHeaders.authorization).toBe(
+  expect(args[0].transportOptions.polling.extraHeaders.authorization).toBe(
     "Bearer short-lived-token"
   );
 });
@@ -72,7 +80,7 @@ test("room.publish() can change a document", async () => {
   await room.init();
   sockets.emit("connect");
 
-  const newState = await room.publishDoc(prevState => {
+  const newState = await room.setDoc((prevState: any) => {
     prevState.someOption = "hello!";
   });
 
@@ -84,6 +92,12 @@ test("room.restore() attempts to restore from offline", async () => {
     authUrl: URL + "/api/roomservice"
   });
   const room = client.room("my-room");
+
+  // @ts-ignore because trust me typescript, I am very wise and have
+  // been on this earth longer than thee, and I, the great programmer,
+  // know for certain that window.indexDB is, in fact, equal to
+  // wiggly-woggle-pop.
+  window.indexedDB = "wiggly-woggle-pop";
 
   jest.spyOn(Offline, "getDoc").mockImplementation(async (ref, doc) => {
     return save(from({ name: "offlinedoc" }));
@@ -122,10 +136,10 @@ test("room.onUpdateDoc callback tries to save the document to offline", async do
   const room = client.room("my-room");
 
   const cb = jest.fn();
-  room.onUpdateDoc(cb);
+  room.onSetDoc(cb);
 
   // @ts-ignore private
-  const onUpdateSocket = room._onUpdateSocketCallback;
+  const onUpdateSocket = room._docClient._onUpdateSocketCallback;
   expect(onUpdateSocket).toBeTruthy();
 
   await room.init();

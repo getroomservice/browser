@@ -6,6 +6,7 @@
 
 import { get, set } from "idb-keyval";
 import uuid from "uuid/v4";
+import invariant from "invariant";
 
 interface IOffline {
   getDoc: (roomRef: string, docId: string) => Promise<string>;
@@ -36,6 +37,11 @@ const Offline: IOffline = {
     }
   },
   getOrCreateActor: async () => {
+    invariant(
+      typeof window !== "undefined",
+      "getOrCreateActor was used on the server side; this is a bug in the client, if you're seeing this, let us know."
+    );
+
     const actor = await get("rs:actor");
     if (actor) {
       return actor as string;

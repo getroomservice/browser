@@ -25,7 +25,9 @@ export default async function authorize(
     // This only works on sites that have setup DNS,
     // or the debugger on roomservice.dev/app, which
     // uses this SDK.
-    credentials: "include",
+    credentials: authorizationUrl.includes("https://api.roomservice.dev")
+      ? "include"
+      : undefined,
     throwHttpErrors: false
   });
 

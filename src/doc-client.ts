@@ -33,6 +33,7 @@ export default class DocClient<T extends Obj> {
   private _roomId?: string;
   private _doc?: Doc<T>;
   private _actorId?: string;
+  private _defaultDoc?: T;
 
   // We define this as a local variable to make testing easier
   _socketURL: string;
@@ -50,6 +51,7 @@ export default class DocClient<T extends Obj> {
   }) {
     this._roomReference = parameters.roomReference;
     this._authorizationUrl = parameters.authUrl;
+    this._defaultDoc = parameters.defaultDoc;
     this._peer = new Peer(this._sendMsgToSocket);
     this._socketURL = ROOM_SERICE_SOCKET_URL;
 
@@ -97,7 +99,7 @@ export default class DocClient<T extends Obj> {
     }
 
     if (!this._doc) {
-      await this.readActorIdThenCreateDoc();
+      await this.readActorIdThenCreateDoc(this._defaultDoc);
     }
     return this.syncOfflineCache();
   }
@@ -121,7 +123,7 @@ export default class DocClient<T extends Obj> {
     }
 
     if (!this._doc) {
-      await this.readActorIdThenCreateDoc();
+      await this.readActorIdThenCreateDoc(this._defaultDoc);
     }
 
     // we're offline, so we should just continue with our fun little world
@@ -257,7 +259,7 @@ export default class DocClient<T extends Obj> {
 
       // This is effectively impossible tbh, but we like to be cautious
       if (!this._doc) {
-        await this.readActorIdThenCreateDoc();
+        await this.readActorIdThenCreateDoc(this._defaultDoc);
       }
 
       // convert the payload clock to a map
@@ -380,7 +382,7 @@ export default class DocClient<T extends Obj> {
     }
 
     if (!this._doc) {
-      this._doc = await this.readActorIdThenCreateDoc();
+      this._doc = await this.readActorIdThenCreateDoc(this._defaultDoc);
     }
 
     if (typeof callback !== "function") {
@@ -396,7 +398,7 @@ export default class DocClient<T extends Obj> {
       );
 
       // this happens if someone deletes the doc, so we should just reinit it.
-      newDoc = this.createDoc(this._actorId);
+      newDoc = this.createDoc(this._actorId, this._defaultDoc);
     }
 
     this._doc = newDoc;

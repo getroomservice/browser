@@ -1,18 +1,30 @@
 {
+  "include": ["src", "types", "test"],
   "compilerOptions": {
-    "declaration": true,
-    "forceConsistentCasingInFileNames": true,
-    "allowSyntheticDefaultImports": true,
+    "target": "es5",
+    "module": "esnext",
+    "lib": ["dom", "esnext"],
     "importHelpers": true,
-    "module": "commonjs",
-    "outDir": "./dist",
-    "rootDirs": ["./src"],
-    "strict": true,
-    "jsx": "preserve",
-    "target": "es2017",
-    "esModuleInterop": true,
+    "declaration": true,
     "sourceMap": true,
-    "typeRoots": ["./node_modules/@types"]
-  },
-  "include": ["./src/**/*"]
+    "rootDir": "./",
+    "strict": false,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictPropertyInitialization": true,
+    "noImplicitThis": true,
+    "alwaysStrict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "moduleResolution": "node",
+    "baseUrl": "./",
+    "paths": {
+      "*": ["src/*", "node_modules/*"]
+    },
+    "jsx": "react",
+    "esModuleInterop": true
+  }
 }

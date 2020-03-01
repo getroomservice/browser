@@ -1,16 +1,16 @@
-import Automerge, { Doc, load, merge, save } from "automerge";
-import { Map } from "immutable";
-import invariant from "invariant";
-import { debounce } from "lodash";
-import { Peer } from "manymerge";
-import { Message } from "manymerge/dist/types";
-import safeJsonStringify from "safe-json-stringify";
-import { ROOM_SERICE_SOCKET_URL } from "./constants";
-import Offline from "./offline";
-import Sockets from "./socket";
-import { Obj, Room, Session } from "./types";
+import Automerge, { Doc, load, merge, save } from 'automerge';
+import { Map } from 'immutable';
+import invariant from 'invariant';
+import { debounce } from 'lodash';
+import { Peer } from 'manymerge';
+import { Message } from 'manymerge/dist/types';
+import safeJsonStringify from 'safe-json-stringify';
+import { ROOM_SERICE_SOCKET_URL } from './constants';
+import Offline from './offline';
+import Sockets from './socket';
+import { Obj, Room, Session } from './types';
 
-const DOC_NAMESPACE = "/v1/doc";
+const DOC_NAMESPACE = '/v1/doc';
 
 interface RoomPacket {
   meta: {
@@ -28,7 +28,6 @@ function asRoomStr(room: RoomPacket) {
 export default class DocClient<T extends Obj> {
   private readonly _peer: Peer;
   private readonly _roomReference: string;
-  private readonly _authorizationUrl: string;
   private _socket?: SocketIOClient.Socket;
   private _roomId?: string;
   private _doc?: Doc<T>;
@@ -44,13 +43,8 @@ export default class DocClient<T extends Obj> {
 
   private _saveOffline: (docId: string, doc: Doc<T>) => void;
 
-  constructor(parameters: {
-    authUrl: string;
-    roomReference: string;
-    defaultDoc?: T;
-  }) {
+  constructor(parameters: { roomReference: string; defaultDoc?: T }) {
     this._roomReference = parameters.roomReference;
-    this._authorizationUrl = parameters.authUrl;
     this._defaultDoc = parameters.defaultDoc;
     this._peer = new Peer(this._sendMsgToSocket);
     this._socketURL = ROOM_SERICE_SOCKET_URL;
@@ -94,7 +88,7 @@ export default class DocClient<T extends Obj> {
   async restore(): Promise<any> {
     // We can't restore on the server, or in environments
     // where indexedb is not defined
-    if (typeof window === "undefined" || typeof indexedDB === "undefined") {
+    if (typeof window === 'undefined' || typeof indexedDB === 'undefined') {
       return {};
     }
 
@@ -109,7 +103,7 @@ export default class DocClient<T extends Obj> {
    */
   async init({
     room,
-    session
+    session,
   }: {
     room?: Room;
     session?: Session;
@@ -118,7 +112,7 @@ export default class DocClient<T extends Obj> {
   }> {
     // If we're server side, we skip everything else
     // and just return the most recent state of the doc.
-    if (typeof window === "undefined") {
+    if (typeof window === 'undefined') {
       return { doc: room?.state };
     }
 
@@ -130,7 +124,7 @@ export default class DocClient<T extends Obj> {
     if (!room || !session) {
       await this.syncOfflineCache();
       return {
-        doc: this._doc! as T
+        doc: this._doc! as T,
       };
     }
 
@@ -139,16 +133,16 @@ export default class DocClient<T extends Obj> {
       transportOptions: {
         polling: {
           extraHeaders: {
-            authorization: "Bearer " + session.token
-          }
-        }
-      }
+            authorization: 'Bearer ' + session.token,
+          },
+        },
+      },
     });
 
     /**
      * Errors
      */
-    Sockets.on(this._socket, "error", (data: string) => {
+    Sockets.on(this._socket, 'error', (data: string) => {
       try {
         const { message } = JSON.parse(data);
         console.error(`Error from Socket: ${message}`);
@@ -158,16 +152,16 @@ export default class DocClient<T extends Obj> {
     });
 
     // Required connect handler
-    Sockets.on(this._socket, "connect", () => {
+    Sockets.on(this._socket, 'connect', () => {
       this._peer.notify(this._doc!);
       this.syncOfflineCache();
     });
 
     // Required disconnect handler
-    Sockets.on(this._socket, "disconnect", reason => {
-      if (reason === "io server disconnect") {
+    Sockets.on(this._socket, 'disconnect', reason => {
+      if (reason === 'io server disconnect') {
         console.warn(
-          "The RoomService client was forcibly disconnected from the server, likely due to invalid auth."
+          'The RoomService client was forcibly disconnected from the server, likely due to invalid auth.'
         );
       }
     });
@@ -177,13 +171,13 @@ export default class DocClient<T extends Obj> {
      * optional
      */
     if (this._onUpdateSocketCallback) {
-      Sockets.on(this._socket, "sync_room_state", this._onUpdateSocketCallback);
+      Sockets.on(this._socket, 'sync_room_state', this._onUpdateSocketCallback);
     }
     if (this._onConnectSocketCallback) {
-      Sockets.on(this._socket, "connect", this._onConnectSocketCallback);
+      Sockets.on(this._socket, 'connect', this._onConnectSocketCallback);
     }
     if (this._onDisconnectSocketCallback) {
-      Sockets.on(this._socket, "disconnect", this._onDisconnectSocketCallback);
+      Sockets.on(this._socket, 'disconnect', this._onDisconnectSocketCallback);
     }
 
     // Merge RoomService's online cache with what we have locally
@@ -210,9 +204,9 @@ export default class DocClient<T extends Obj> {
    * Manually goes offline
    */
   disconnect() {
-    if (typeof window === "undefined") {
+    if (typeof window === 'undefined') {
       console.warn(
-        "Attempting to call disconnect on the server, this is a no-op."
+        'Attempting to call disconnect on the server, this is a no-op.'
       );
       return;
     }
@@ -224,9 +218,9 @@ export default class DocClient<T extends Obj> {
   }
 
   onSetDoc(callback: (state: Readonly<any>) => any) {
-    if (typeof window === "undefined") {
+    if (typeof window === 'undefined') {
       console.warn(
-        "Attempting to call onSetDoc on the server, this is a no-op."
+        'Attempting to call onSetDoc on the server, this is a no-op.'
       );
       return;
     }
@@ -277,7 +271,7 @@ export default class DocClient<T extends Obj> {
         );
       }
       this._doc = newDoc;
-      this._saveOffline("default", this._doc);
+      this._saveOffline('default', this._doc);
       callback(this._doc);
     };
 
@@ -287,13 +281,13 @@ export default class DocClient<T extends Obj> {
       return;
     }
 
-    Sockets.on(this._socket, "sync_room_state", socketCallback);
+    Sockets.on(this._socket, 'sync_room_state', socketCallback);
   }
 
   onConnect(callback: () => any) {
-    if (typeof window === "undefined") {
+    if (typeof window === 'undefined') {
       console.warn(
-        "Attempting to call onConnect on the server, this is a no-op."
+        'Attempting to call onConnect on the server, this is a no-op.'
       );
       return;
     }
@@ -304,13 +298,13 @@ export default class DocClient<T extends Obj> {
       return;
     }
 
-    this._socket.on("connect", callback);
+    this._socket.on('connect', callback);
   }
 
   onDisconnect(callback: () => any) {
-    if (typeof window === "undefined") {
+    if (typeof window === 'undefined') {
       console.warn(
-        "Attempting to call onDisconnect on the server, this is a no-op."
+        'Attempting to call onDisconnect on the server, this is a no-op.'
       );
       return;
     }
@@ -321,11 +315,11 @@ export default class DocClient<T extends Obj> {
       return;
     }
 
-    this._socket.on("disconnect", callback);
+    this._socket.on('disconnect', callback);
   }
 
   private async syncOfflineCache(): Promise<Doc<T>> {
-    const data = await Offline.getDoc(this._roomReference, "default");
+    const data = await Offline.getDoc(this._roomReference, 'default');
     if (!data) {
       return this._doc!;
     }
@@ -339,7 +333,7 @@ export default class DocClient<T extends Obj> {
 
     // We explictly do not add
     const offlineDoc = load<T>(data, {
-      actorId
+      actorId,
     });
 
     this._doc = offlineDoc;
@@ -365,19 +359,19 @@ export default class DocClient<T extends Obj> {
 
     const room: RoomPacket = {
       meta: {
-        roomId: this._roomId
+        roomId: this._roomId,
       },
       payload: {
-        msg: automergeMsg
-      }
+        msg: automergeMsg,
+      },
     };
 
-    Sockets.emit(this._socket, "sync_room_state", asRoomStr(room));
+    Sockets.emit(this._socket, 'sync_room_state', asRoomStr(room));
   };
 
   async setDoc<D>(callback: (state: D) => void): Promise<D> {
-    if (typeof window === "undefined") {
-      console.warn("Attempting to call setDoc on the server, this is a no-op.");
+    if (typeof window === 'undefined') {
+      console.warn('Attempting to call setDoc on the server, this is a no-op.');
       return {} as D;
     }
 
@@ -385,7 +379,7 @@ export default class DocClient<T extends Obj> {
       this._doc = await this.readActorIdThenCreateDoc(this._defaultDoc);
     }
 
-    if (typeof callback !== "function") {
+    if (typeof callback !== 'function') {
       throw new Error(`room.publishDoc expects a function.`);
     }
 
@@ -402,7 +396,7 @@ export default class DocClient<T extends Obj> {
     }
 
     this._doc = newDoc;
-    this._saveOffline("default", newDoc);
+    this._saveOffline('default', newDoc);
     this._peer.notify(newDoc);
 
     return newDoc as D;

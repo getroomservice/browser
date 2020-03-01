@@ -26,7 +26,7 @@ export default class RoomClient {
     this._headers = parameters.headers;
   }
 
-  // used for testing locally
+  // @ts-ignore used for testing locally
   private set _socketURL(url: string) {
     this._docClient._socketURL = url;
     this._presenceClient._socketURL = url;

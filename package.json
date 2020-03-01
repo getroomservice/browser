@@ -28,7 +28,7 @@
     "typescript": "^3.7.5"
   },
   "dependencies": {
-    "automerge": "^0.12.1",
+    "automerge": "0.13.0",
     "idb-keyval": "^3.2.0",
     "immutable": "^4.0.0-rc.12",
     "invariant": "^2.2.4",

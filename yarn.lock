@@ -551,10 +551,10 @@ automerge-clocks@1.2.0:
   resolved "https://registry.yarnpkg.com/automerge-clocks/-/automerge-clocks-1.2.0.tgz#b14a127c8206ae0cac80662855978dbba3a73b38"
   integrity sha512-OuJSINp5Dv2qqWfuM/qhN9VajSWd+Sk19oLVR7tPih4xI+4dnu+6q6pNsCJkprx6zII/wMZPKT1olVSIcNY/RA==
 
-automerge@^0.12.1:
-  version "0.12.1"
-  resolved "https://registry.yarnpkg.com/automerge/-/automerge-0.12.1.tgz#8e8ca23affa888c6376ee19068eab573cfa8ba09"
-  integrity sha512-7JOiRk4b6EP/Uj0AjmZTeYICXJmBRHFkL0U3mlTNXuDlUr3c4v/Wb8v0RXiX4UuVgGjkovcjOdiBMkVmzdu2KQ==
+automerge@0.13.0:
+  version "0.13.0"
+  resolved "https://registry.yarnpkg.com/automerge/-/automerge-0.13.0.tgz#cf9852a30255d445ac7f15576c53f78624f6560b"
+  integrity sha512-yJZmKeKgyPJt6xgZ0MpV2GYT/U4cDpWxK4xCrGIXGSuiboTI+eDSMJSfBWtNiUV7QRHaVeChho5KveYjAj91cg==
   dependencies:
     immutable "^3.8.2"
     transit-immutable-js "^0.7.0"

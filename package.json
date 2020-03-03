@@ -53,7 +53,7 @@
     "ky": "^0.16.1",
     "ky-universal": "^0.3.0",
     "lodash": "^4.17.15",
-    "manymerge": "2.2.0",
+    "manymerge": "2.5.3",
     "safe-json-stringify": "^1.2.0",
     "socket.io-client": "^2.3.0",
     "uuid": "^3.3.3"

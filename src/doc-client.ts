@@ -261,15 +261,11 @@ export default class DocClient<T extends Obj> {
 
       const newDoc = this._peer.applyMessage(payload.msg, this._doc!);
 
-      // Automerge will just return undefined
-      // if a message is corrupted in some way that it doesn't like.
-      // In these cases, we shouldn't actually save it offline otherwise
-      // we'd create a hard-to-fix corruption.
+      // if we don't have any new changes, we don't need to do anything.
       if (!newDoc) {
-        throw new Error(
-          `Response from RoomService API seems corrupted, aborting. Response: ${data}`
-        );
+        return;
       }
+
       this._doc = newDoc;
       this._saveOffline('default', this._doc);
       callback(this._doc);

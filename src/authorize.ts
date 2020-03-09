@@ -1,5 +1,5 @@
-import invariant from "invariant";
-import ky from "ky-universal";
+import invariant from 'invariant';
+import ky from 'ky-universal';
 
 interface RoomValue {
   id: string;
@@ -16,8 +16,8 @@ export default async function authorize(
   const result = await ky.post(authorizationUrl, {
     json: {
       room: {
-        reference: roomReference
-      }
+        reference: roomReference,
+      },
     },
 
     headers: headers || undefined,
@@ -25,16 +25,18 @@ export default async function authorize(
     // This only works on sites that have setup DNS,
     // or the debugger on roomservice.dev/app, which
     // uses this SDK.
-    credentials: authorizationUrl.includes("https://api.roomservice.dev")
-      ? "include"
-      : undefined,
-    throwHttpErrors: false
+    credentials:
+      authorizationUrl.includes('https://api.roomservice.dev') &&
+      authorizationUrl.includes('debugger-auth-endpoint')
+        ? 'include'
+        : undefined,
+    throwHttpErrors: false,
   });
 
   // This is just user error, so it's probably fine to throw here.
   invariant(
     result.status !== 405,
-    "Your authorization endpoint does not appear to accept a POST request."
+    'Your authorization endpoint does not appear to accept a POST request.'
   );
 
   if (result.status < 200 || result.status >= 400) {

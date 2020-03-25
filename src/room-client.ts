@@ -2,7 +2,7 @@ import DocClient from "./doc-client";
 import PresenceClient, { PresenceMeta } from "./presence-client";
 import { Obj } from "./types";
 import authorize from "./authorize";
-import { throttle } from "lodash-es";
+import { throttle } from "lodash";
 
 interface RoomClientParameters {
   authUrl: string;

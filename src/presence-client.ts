@@ -2,7 +2,7 @@ import Sockets from "./socket";
 import { ROOM_SERICE_SOCKET_URL } from "./constants";
 import invariant from "invariant";
 import { Room, Session } from "./types";
-import { throttle } from "lodash-es";
+import { throttle } from "lodash";
 
 const PRESENCE_NAMESPACE = "/v1/presence";
 

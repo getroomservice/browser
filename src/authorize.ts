@@ -4,7 +4,6 @@ import ky from 'ky-universal';
 interface RoomValue {
   id: string;
   reference: string;
-  state: string;
 }
 
 export default async function authorize(

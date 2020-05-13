@@ -2,7 +2,7 @@
  * This is just a wrapper around Socket.io that's easier
  * to test.
  */
-import IO from "socket.io-client";
+import IO from 'socket.io-client';
 
 // Namespaced so we can mock stuff
 const Sockets = {
@@ -13,11 +13,11 @@ const Sockets = {
   on(
     socket: SocketIOClient.Socket,
     event:
-      | "connect"
-      | "disconnect"
-      | "error"
-      | "sync_room_state"
-      | "update_presence",
+      | 'connect'
+      | 'disconnect'
+      | 'error'
+      | 'sync_room_state'
+      | 'update_presence',
     fn: (...args: any[]) => void
   ) {
     socket.on(event, fn);
@@ -25,7 +25,7 @@ const Sockets = {
 
   emit(
     socket: SocketIOClient.Socket,
-    event: "sync_room_state" | "update_presence",
+    event: 'sync_room_state' | 'update_presence',
     ...args: any[]
   ) {
     socket.emit(event, ...args);
@@ -33,7 +33,7 @@ const Sockets = {
 
   disconnect(socket: SocketIOClient.Socket) {
     socket.disconnect();
-  }
+  },
 };
 
 export default Sockets;

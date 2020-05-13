@@ -1,3 +1,3 @@
-import RoomServiceClient from "./client";
+import RoomServiceClient from './client';
 
 export default RoomServiceClient;

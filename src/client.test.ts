@@ -9,14 +9,13 @@ import { uniq } from 'lodash';
 const URL = 'https://coolsite.com';
 jest.mock('idb-keyval');
 
-function mockAuthEndpoint(stateStr?: string) {
+function mockAuthEndpoint() {
   return nock(URL)
     .post('/api/roomservice')
     .reply(200, {
       room: {
         id: 'id',
         reference: 'my-room',
-        state: stateStr || '{}',
       },
       session: {
         token: 'short-lived-token',

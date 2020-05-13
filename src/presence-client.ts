@@ -1,10 +1,10 @@
-import Sockets from "./socket";
-import { ROOM_SERICE_SOCKET_URL } from "./constants";
-import invariant from "invariant";
-import { Room, Session } from "./types";
-import { throttle } from "lodash";
+import Sockets from './socket';
+import { ROOM_SERICE_SOCKET_URL } from './constants';
+import invariant from 'invariant';
+import { Room, Session } from './types';
+import { throttle } from 'lodash';
 
-const PRESENCE_NAMESPACE = "/v1/presence";
+const PRESENCE_NAMESPACE = '/v1/presence';
 
 export interface PresenceMeta {
   roomId: string;
@@ -47,13 +47,13 @@ interface PresenceOptions {
 }
 
 function isParsable(val: any) {
-  return typeof val === "object" && val !== null;
+  return typeof val === 'object' && val !== null;
 }
 
 const rateLimittedEmit = throttle(
   (
     socket: SocketIOClient.Socket,
-    event: "sync_room_state" | "update_presence",
+    event: 'sync_room_state' | 'update_presence',
     ...args: any[]
   ) => Sockets.emit(socket, event, ...args),
   40,
@@ -76,7 +76,7 @@ export default class PresenceClient {
 
   init({ room, session }: { room?: Room; session?: Session }) {
     if (!room || !session) {
-      console.warn("Room Service is offline.");
+      console.warn('Room Service is offline.');
       return;
     }
 
@@ -85,10 +85,10 @@ export default class PresenceClient {
       transportOptions: {
         polling: {
           extraHeaders: {
-            authorization: "Bearer " + session.token
-          }
-        }
-      }
+            authorization: 'Bearer ' + session.token,
+          },
+        },
+      },
     });
   }
 
@@ -123,22 +123,22 @@ export default class PresenceClient {
         roomId: this._roomId,
         createdAt: new Date().getTime(),
         namespace: key,
-        ttl
+        ttl,
       },
-      payload: value
+      payload: value,
     };
 
-    rateLimittedEmit(this._socket, "update_presence", packet);
+    rateLimittedEmit(this._socket, 'update_presence', packet);
   }
 
   onSetPresence<P>(callback: (meta: PresenceMeta, value: P) => void) {
     // Offline do nothing
     if (!this._socket) {
-      console.warn("offline");
+      console.warn('offline');
       return;
     }
 
-    Sockets.on(this._socket, "update_presence", (data: string) => {
+    Sockets.on(this._socket, 'update_presence', (data: string) => {
       const { meta, payload } = JSON.parse(data) as PresencePacket<any>;
       if (!this._roomId) {
         throw new Error(

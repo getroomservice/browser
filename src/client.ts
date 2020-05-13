@@ -1,5 +1,5 @@
-import RoomClient from "./room-client";
-import { Obj } from "./types";
+import RoomClient from './room-client';
+import { Obj } from './types';
 
 export default class RoomServiceClient {
   private readonly _authorizationUrl: string;
@@ -21,7 +21,7 @@ export default class RoomServiceClient {
       authUrl: this._authorizationUrl,
       roomReference,
       defaultDoc,
-      headers: this._headers
+      headers: this._headers,
     });
 
     this._roomPool[roomReference] = room;

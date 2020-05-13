@@ -5,8 +5,10 @@ import Offline from './offline';
 import Sockets from './socket';
 import { injectFakeSocket } from './test-socket';
 import { uniq } from 'lodash';
+import { ROOM_SERICE_CLIENT_URL } from './constants';
 
 const URL = 'https://coolsite.com';
+const ROOM_ID = 'my-room-id';
 jest.mock('idb-keyval');
 
 function mockAuthEndpoint() {
@@ -14,7 +16,7 @@ function mockAuthEndpoint() {
     .post('/api/roomservice')
     .reply(200, {
       room: {
-        id: 'id',
+        id: ROOM_ID,
         reference: 'my-room',
       },
       session: {
@@ -23,8 +25,15 @@ function mockAuthEndpoint() {
     });
 }
 
+function mockDocumentEndpoint(doc?: any) {
+  return nock(ROOM_SERICE_CLIENT_URL)
+    .get(`/v1/rooms/${ROOM_ID}/documents/default`)
+    .reply(200, save(from(doc || { foo: 'hello' })));
+}
+
 it('should call the authorization endpoint when creating a room', async () => {
-  const scope = mockAuthEndpoint();
+  const authScope = mockAuthEndpoint();
+  const docScope = mockDocumentEndpoint();
   const client = new RoomServiceClient({
     authUrl: URL + '/api/roomservice',
   });
@@ -32,11 +41,13 @@ it('should call the authorization endpoint when creating a room', async () => {
 
   await room.init();
 
-  expect(scope.isDone()).toBeTruthy();
+  expect(authScope.isDone()).toBeTruthy();
+  expect(docScope.isDone()).toBeTruthy();
 });
 
 test('room gets called with bearer token', async () => {
   mockAuthEndpoint();
+  mockDocumentEndpoint();
   const mock = jest.spyOn(Sockets, 'newSocket').mockImplementation(() => {
     // @ts-ignore
     return { on: jest.fn() } as SocketIOClient.Socket;
@@ -66,6 +77,7 @@ test('room gets called with bearer token', async () => {
 
 test('room.publish() can change a document', async () => {
   mockAuthEndpoint();
+  mockDocumentEndpoint();
 
   const client = new RoomServiceClient({
     authUrl: URL + '/api/roomservice',
@@ -115,7 +127,10 @@ test('room.init() will merge online data with offline data', async () => {
   });
 
   // setup online
-  mockAuthEndpoint(save(from({ online: 'online' })));
+  mockAuthEndpoint();
+  mockDocumentEndpoint({
+    online: 'online',
+  });
 
   const { doc } = await room.init();
   expect(doc).toEqual({

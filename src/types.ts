@@ -4,7 +4,6 @@ export type Obj = { [key: string]: any };
 export interface Room {
   reference: string;
   id: string;
-  state?: any;
 }
 
 export interface Session {

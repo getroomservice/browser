@@ -61,7 +61,7 @@ export default class RoomClient {
           );
         }
 
-        return { doc: room?.state };
+        return { doc: undefined };
       }
 
       // Presence client

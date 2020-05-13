@@ -1,5 +1,5 @@
 import Sockets from './socket';
-import { ROOM_SERICE_SOCKET_URL } from './constants';
+import { ROOM_SERICE_CLIENT_URL } from './constants';
 import invariant from 'invariant';
 import { Room, Session } from './types';
 import { throttle } from 'lodash';
@@ -69,7 +69,7 @@ export default class PresenceClient {
   private _socket?: SocketIOClient.Socket;
 
   constructor(parameters: { authUrl: string; roomReference: string }) {
-    this._socketURL = ROOM_SERICE_SOCKET_URL;
+    this._socketURL = ROOM_SERICE_CLIENT_URL;
     this._authorizationUrl = parameters.authUrl;
     this._roomReference = parameters.roomReference;
   }

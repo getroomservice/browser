@@ -6,7 +6,7 @@ import IO from 'socket.io-client';
 
 // Namespaced so we can mock stuff
 const Sockets = {
-  newSocket(url: string, opts: SocketIOClient.ConnectOpts) {
+  newSocket(url: string, opts?: SocketIOClient.ConnectOpts) {
     return IO(url, opts);
   },
 
@@ -25,7 +25,7 @@ const Sockets = {
 
   emit(
     socket: SocketIOClient.Socket,
-    event: 'sync_room_state' | 'update_presence',
+    event: 'sync_room_state' | 'update_presence' | 'authorization',
     ...args: any[]
   ) {
     socket.emit(event, ...args);

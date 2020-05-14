@@ -81,14 +81,10 @@ export default class PresenceClient {
     }
 
     this._roomId = room.id;
-    this._socket = Sockets.newSocket(this._socketURL + PRESENCE_NAMESPACE, {
-      transportOptions: {
-        polling: {
-          extraHeaders: {
-            authorization: 'Bearer ' + session.token,
-          },
-        },
-      },
+    this._socket = Sockets.newSocket(this._socketURL + PRESENCE_NAMESPACE);
+    // Immediately attempt to authorize
+    Sockets.emit(this._socket, 'authorization', {
+      payload: session.token,
     });
   }
 

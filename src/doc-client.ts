@@ -127,14 +127,11 @@ export default class DocClient<T extends Obj> {
     }
 
     this._roomId = room.id;
-    this._socket = Sockets.newSocket(this._socketURL + DOC_NAMESPACE, {
-      transportOptions: {
-        polling: {
-          extraHeaders: {
-            authorization: 'Bearer ' + session.token,
-          },
-        },
-      },
+    this._socket = Sockets.newSocket(this._socketURL + DOC_NAMESPACE);
+
+    // Immediately attempt to authorize via traditional auth
+    Sockets.emit(this._socket, 'authorization', {
+      payload: session.token,
     });
 
     /**

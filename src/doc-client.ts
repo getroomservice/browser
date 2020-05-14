@@ -5,7 +5,7 @@ import { debounce } from 'lodash';
 import { Peer } from 'manymerge';
 import { Message } from 'manymerge/dist/types';
 import safeJsonStringify from 'safe-json-stringify';
-import { ROOM_SERICE_SOCKET_URL } from './constants';
+import { ROOM_SERICE_CLIENT_URL } from './constants';
 import Offline from './offline';
 import Sockets from './socket';
 import { Obj, Room, Session } from './types';
@@ -47,7 +47,7 @@ export default class DocClient<T extends Obj> {
     this._roomReference = parameters.roomReference;
     this._defaultDoc = parameters.defaultDoc;
     this._peer = new Peer(this._sendMsgToSocket);
-    this._socketURL = ROOM_SERICE_SOCKET_URL;
+    this._socketURL = ROOM_SERICE_CLIENT_URL;
 
     // We define this here so we can debounce the save function
     // Otherwise we'll get quite the performance hit
@@ -108,12 +108,10 @@ export default class DocClient<T extends Obj> {
     room?: Room;
     session?: Session;
   }): Promise<{
-    doc: T;
+    doc?: T;
   }> {
-    // If we're server side, we skip everything else
-    // and just return the most recent state of the doc.
     if (typeof window === 'undefined') {
-      return { doc: room?.state };
+      return { doc: undefined };
     }
 
     if (!this._doc) {
@@ -180,16 +178,32 @@ export default class DocClient<T extends Obj> {
       Sockets.on(this._socket, 'disconnect', this._onDisconnectSocketCallback);
     }
 
+    // Load the document of the room.
+    const result = await fetch(
+      this._socketURL + `/client/v1/rooms/${room.id}/documents/default`,
+      {
+        headers: {
+          authorization: 'Bearer ' + session.token,
+        },
+      }
+    );
+    if (result.status !== 200) {
+      throw new Error(
+        `Unexpectedly did not find document for room ${room.reference}`
+      );
+    }
+    const roomStateStr = await result.text();
+
     // Merge RoomService's online cache with what we have locally
     let state;
     try {
       // NOTE: we purposefully don't define an actor id,
       // since it's not assumed this state is defined by our actor.
-      state = Automerge.load(room.state) as T;
+      state = Automerge.load(roomStateStr) as T;
       const local = await this.syncOfflineCache();
+
       state = merge(local, state as T);
 
-      // @ts-ignore no trust me I swear
       this._doc = state;
       this._peer.notify(this._doc);
     } catch (err) {
@@ -259,16 +273,20 @@ export default class DocClient<T extends Obj> {
       // convert the payload clock to a map
       payload.msg.clock = Map(payload.msg.clock);
 
-      const newDoc = this._peer.applyMessage(payload.msg, this._doc!);
+      try {
+        const newDoc = this._peer.applyMessage(payload.msg, this._doc!);
 
-      // if we don't have any new changes, we don't need to do anything.
-      if (!newDoc) {
-        return;
+        // if we don't have any new changes, we don't need to do anything.
+        if (!newDoc) {
+          return;
+        }
+
+        this._doc = newDoc;
+        this._saveOffline('default', this._doc);
+        callback(this._doc);
+      } catch (err) {
+        console.error(err);
       }
-
-      this._doc = newDoc;
-      this._saveOffline('default', this._doc);
-      callback(this._doc);
     };
 
     // If we're offline, just wait till we're back online to assign this callback

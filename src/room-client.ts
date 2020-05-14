@@ -1,8 +1,8 @@
-import DocClient from "./doc-client";
-import PresenceClient, { PresenceMeta } from "./presence-client";
-import { Obj } from "./types";
-import authorize from "./authorize";
-import { throttle } from "lodash";
+import DocClient from './doc-client';
+import PresenceClient, { PresenceMeta } from './presence-client';
+import { Obj } from './types';
+import authorize from './authorize';
+import { throttle } from 'lodash';
 
 interface RoomClientParameters {
   authUrl: string;
@@ -53,7 +53,7 @@ export default class RoomClient {
 
       // We're on the server, so we shouldn't init, because we don't need
       // to connect to the clients.
-      if (typeof window === "undefined") {
+      if (typeof window === 'undefined') {
         // This would signal that the server side can't access the auth endpoint
         if (!room) {
           throw new Error(
@@ -61,26 +61,26 @@ export default class RoomClient {
           );
         }
 
-        return { doc: room?.state };
+        return { doc: undefined };
       }
 
       // Presence client
       this._presenceClient.init({
         room,
-        session
+        session,
       });
 
       // Doc client
       const { doc } = await this._docClient.init({
         room,
-        session
+        session,
       });
 
       return { doc };
     },
     100,
     {
-      leading: true
+      leading: true,
     }
   );
 

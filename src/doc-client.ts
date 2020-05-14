@@ -180,7 +180,12 @@ export default class DocClient<T extends Obj> {
 
     // Load the document of the room.
     const result = await fetch(
-      ROOM_SERICE_CLIENT_URL + `/v1/rooms/${room.id}/documents/default`
+      this._socketURL + `/client/v1/rooms/${room.id}/documents/default`,
+      {
+        headers: {
+          authorization: 'Bearer ' + session.token,
+        },
+      }
     );
     if (result.status !== 200) {
       throw new Error(
@@ -268,16 +273,20 @@ export default class DocClient<T extends Obj> {
       // convert the payload clock to a map
       payload.msg.clock = Map(payload.msg.clock);
 
-      const newDoc = this._peer.applyMessage(payload.msg, this._doc!);
+      try {
+        const newDoc = this._peer.applyMessage(payload.msg, this._doc!);
 
-      // if we don't have any new changes, we don't need to do anything.
-      if (!newDoc) {
-        return;
+        // if we don't have any new changes, we don't need to do anything.
+        if (!newDoc) {
+          return;
+        }
+
+        this._doc = newDoc;
+        this._saveOffline('default', this._doc);
+        callback(this._doc);
+      } catch (err) {
+        console.error(err);
       }
-
-      this._doc = newDoc;
-      this._saveOffline('default', this._doc);
-      callback(this._doc);
     };
 
     // If we're offline, just wait till we're back online to assign this callback

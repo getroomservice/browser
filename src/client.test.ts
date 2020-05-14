@@ -27,7 +27,7 @@ function mockAuthEndpoint() {
 
 function mockDocumentEndpoint(doc?: any) {
   return nock(ROOM_SERICE_CLIENT_URL)
-    .get(`/v1/rooms/${ROOM_ID}/documents/default`)
+    .get(`/client/v1/rooms/${ROOM_ID}/documents/default`)
     .reply(200, save(from(doc || { foo: 'hello' })));
 }
 

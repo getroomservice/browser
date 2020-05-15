@@ -159,6 +159,12 @@ export default class PresenceClient {
         return;
       }
 
+      // This socket event will fire for ALL rooms that we belong
+      // to,
+      if (meta.roomId !== this._roomId) {
+        return;
+      }
+
       callback(meta, payload);
     });
   }

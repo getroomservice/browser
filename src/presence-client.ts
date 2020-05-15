@@ -83,8 +83,14 @@ export default class PresenceClient {
     }
 
     this._roomId = room.id;
-    this._socket = Sockets.newSocket(this._socketURL + PRESENCE_NAMESPACE);
-    // Immediately attempt to authorize
+    this._socket = Sockets.newSocket(this._socketURL + PRESENCE_NAMESPACE, {
+      transports: ['websocket'],
+    });
+
+    Sockets.on(this._socket, 'reconnect_attempt', () => {
+      invariant(this._socket);
+      this._socket.io.opts.transports = ['websocket'];
+    });
 
     // Immediately attempt to authorize via traditional auth
     this._authorized = authorizeSocket(this._socket, session.token);

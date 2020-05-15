@@ -129,7 +129,14 @@ export default class DocClient<T extends Obj> {
     }
 
     this._roomId = room.id;
-    this._socket = Sockets.newSocket(this._socketURL + DOC_NAMESPACE);
+    this._socket = Sockets.newSocket(this._socketURL + DOC_NAMESPACE, {
+      transports: ['websocket'],
+    });
+
+    Sockets.on(this._socket, 'reconnect_attempt', () => {
+      invariant(this._socket);
+      this._socket.io.opts.transports = ['polling', 'websocket'];
+    });
 
     /**
      * Errors

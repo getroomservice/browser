@@ -18,7 +18,8 @@ const Sockets = {
       | 'error'
       | 'sync_room_state'
       | 'update_presence'
-      | 'authenticated',
+      | 'authenticated'
+      | 'reconnect_attempt',
     fn: (...args: any[]) => void
   ) {
     socket.on(event, fn);

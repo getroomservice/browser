@@ -3,6 +3,7 @@ import { ROOM_SERICE_CLIENT_URL } from './constants';
 import invariant from 'invariant';
 import { Room, Session } from './types';
 import { throttle } from 'lodash';
+import { authorizeSocket } from './socketauth';
 
 const PRESENCE_NAMESPACE = '/v1/presence';
 
@@ -67,6 +68,7 @@ export default class PresenceClient {
   _roomReference: string;
   _roomId?: string;
   private _socket?: SocketIOClient.Socket;
+  private _authorized?: Promise<boolean>;
 
   constructor(parameters: { authUrl: string; roomReference: string }) {
     this._socketURL = ROOM_SERICE_CLIENT_URL;
@@ -83,12 +85,12 @@ export default class PresenceClient {
     this._roomId = room.id;
     this._socket = Sockets.newSocket(this._socketURL + PRESENCE_NAMESPACE);
     // Immediately attempt to authorize
-    Sockets.emit(this._socket, 'authorization', {
-      payload: session.token,
-    });
+
+    // Immediately attempt to authorize via traditional auth
+    this._authorized = authorizeSocket(this._socket, session.token);
   }
 
-  setPresence<P>(key: string, value: P, options?: PresenceOptions) {
+  async setPresence<P>(key: string, value: P, options?: PresenceOptions) {
     // Offline do nothing
     if (!this._socket) {
       return;
@@ -97,6 +99,11 @@ export default class PresenceClient {
       this._roomId,
       "setPresence is missing a roomId, this is likely a bug with the client. If you're seeing this, please contact us."
     );
+
+    // Ensure we're authorized before doing anything
+    if (this._authorized) {
+      await this._authorized;
+    }
 
     const ttl = options?.ttl || 1000 * 2;
 
@@ -134,7 +141,7 @@ export default class PresenceClient {
       return;
     }
 
-    Sockets.on(this._socket, 'update_presence', (data: string) => {
+    Sockets.on(this._socket, 'update_presence', async (data: string) => {
       const { meta, payload } = JSON.parse(data) as PresencePacket<any>;
       if (!this._roomId) {
         throw new Error(

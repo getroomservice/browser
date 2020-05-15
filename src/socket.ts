@@ -17,7 +17,8 @@ const Sockets = {
       | 'disconnect'
       | 'error'
       | 'sync_room_state'
-      | 'update_presence',
+      | 'update_presence'
+      | 'authenticated',
     fn: (...args: any[]) => void
   ) {
     socket.on(event, fn);
@@ -25,7 +26,7 @@ const Sockets = {
 
   emit(
     socket: SocketIOClient.Socket,
-    event: 'sync_room_state' | 'update_presence' | 'authorization',
+    event: 'sync_room_state' | 'update_presence' | 'authenticate',
     ...args: any[]
   ) {
     socket.emit(event, ...args);

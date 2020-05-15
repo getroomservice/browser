@@ -9,6 +9,7 @@ import { ROOM_SERICE_CLIENT_URL } from './constants';
 import Offline from './offline';
 import Sockets from './socket';
 import { Obj, Room, Session } from './types';
+import { authorizeSocket } from './socketauth';
 
 const DOC_NAMESPACE = '/v1/doc';
 
@@ -33,6 +34,7 @@ export default class DocClient<T extends Obj> {
   private _doc?: Doc<T>;
   private _actorId?: string;
   private _defaultDoc?: T;
+  private _authorized?: Promise<boolean>;
 
   // We define this as a local variable to make testing easier
   _socketURL: string;
@@ -129,11 +131,6 @@ export default class DocClient<T extends Obj> {
     this._roomId = room.id;
     this._socket = Sockets.newSocket(this._socketURL + DOC_NAMESPACE);
 
-    // Immediately attempt to authorize via traditional auth
-    Sockets.emit(this._socket, 'authorization', {
-      payload: session.token,
-    });
-
     /**
      * Errors
      */
@@ -145,6 +142,9 @@ export default class DocClient<T extends Obj> {
         console.error(`Unparsable error from socket: ${data}`);
       }
     });
+
+    // Immediately attempt to authorize via traditional auth
+    this._authorized = authorizeSocket(this._socket, session.token);
 
     // Required connect handler
     Sockets.on(this._socket, 'connect', () => {
@@ -357,9 +357,15 @@ export default class DocClient<T extends Obj> {
   // WARNING: This function is an arrow function specifically because
   // it needs to access this._socket. If you use a regular function,
   // it won't work.
-  private _sendMsgToSocket = (automergeMsg: Message) => {
+  private _sendMsgToSocket = async (automergeMsg: Message) => {
     // we're offline, so don't do anything
     if (!this._socket) {
+      return;
+    }
+
+    const isAuthorized = await this._authorized;
+    if (!isAuthorized) {
+      console.error('Room Service is unable to authorize');
       return;
     }
 

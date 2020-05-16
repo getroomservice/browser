@@ -135,7 +135,7 @@ export default class DocClient<T extends Obj> {
 
     Sockets.on(this._socket, 'reconnect_attempt', () => {
       invariant(this._socket);
-      this._socket.io.opts.transports = ['polling', 'websocket'];
+      this._socket.io.opts.transports = ['websocket'];
     });
 
     /**

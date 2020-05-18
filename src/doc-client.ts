@@ -287,7 +287,13 @@ export default class DocClient<T extends Obj> {
 
         this._doc = newDoc;
         this._saveOffline('default', this._doc);
-        callback(this._doc);
+
+        // From a user's perspective, the document should only update
+        // if we've actually made changes (since only we care about the
+        // clock position of everyone else).
+        if (payload.msg.changes) {
+          callback(this._doc);
+        }
       } catch (err) {
         console.error(err);
       }

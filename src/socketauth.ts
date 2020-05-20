@@ -7,16 +7,19 @@ export async function authorizeSocket(
 ): Promise<boolean> {
   return new Promise(resolve => {
     invariant(socket, 'Requires socket to be defined');
+
+    const timeout = setTimeout(() => {
+      resolve(false);
+    }, 15000);
+
     Sockets.emit(socket, 'authenticate', {
       payload: token,
     });
 
     Sockets.on(socket, 'authenticated', () => {
+      clearTimeout(timeout);
+      Sockets.off(socket, 'authenticated');
       resolve(true);
     });
-
-    setTimeout(() => {
-      resolve(false);
-    }, 10000);
   });
 }

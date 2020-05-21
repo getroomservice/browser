@@ -219,7 +219,7 @@ export default class DocClient<T extends Obj> {
   }
 
   /**
-   * Manually goes offline
+   * Manually go offline
    */
   disconnect() {
     if (typeof window === 'undefined') {

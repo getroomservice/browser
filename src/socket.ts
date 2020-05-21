@@ -3,6 +3,16 @@
  * to test.
  */
 import IO from 'socket.io-client';
+import invariant from 'invariant';
+
+type Events =
+  | 'connect'
+  | 'disconnect'
+  | 'error'
+  | 'sync_room_state'
+  | 'update_presence'
+  | 'authenticated'
+  | 'reconnect_attempt';
 
 // Namespaced so we can mock stuff
 const Sockets = {
@@ -12,21 +22,11 @@ const Sockets = {
 
   on(
     socket: SocketIOClient.Socket,
-    event:
-      | 'connect'
-      | 'disconnect'
-      | 'error'
-      | 'sync_room_state'
-      | 'update_presence'
-      | 'authenticated'
-      | 'reconnect_attempt',
+    event: Events,
     fn: (...args: any[]) => void
   ) {
+    invariant(!!socket && !!event, 'Requires socket defined');
     socket.on(event, fn);
-  },
-
-  off(socket: SocketIOClient.Socket, event: string) {
-    socket.off(event);
   },
 
   emit(
@@ -34,6 +34,7 @@ const Sockets = {
     event: 'sync_room_state' | 'update_presence' | 'authenticate',
     ...args: any[]
   ) {
+    invariant(!!socket && !!event, 'Requires socket defined');
     socket.emit(event, ...args);
   },
 

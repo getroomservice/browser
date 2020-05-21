@@ -431,4 +431,32 @@ export default class DocClient<T extends Obj> {
 
     return newDoc as D;
   }
+
+  undo() {
+    if (this._doc && Automerge.canUndo(this._doc)) {
+      let newDoc = Automerge.undo(this._doc);
+
+      this._doc = newDoc;
+      this._saveOffline('default', newDoc);
+      this._peer.notify(newDoc);
+
+      return newDoc;
+    } else {
+      return this._doc;
+    }
+  }
+
+  redo() {
+    if (this._doc && Automerge.canRedo(this._doc)) {
+      let newDoc = Automerge.redo(this._doc);
+
+      this._doc = newDoc;
+      this._saveOffline('default', newDoc);
+      this._peer.notify(newDoc);
+
+      return newDoc;
+    } else {
+      return this._doc;
+    }
+  }
 }

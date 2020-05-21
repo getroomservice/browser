@@ -295,6 +295,14 @@ export default class DocClient<T extends Obj> {
           callback(this._doc);
         }
       } catch (err) {
+        // Ignore Automerge double-apply errors
+        if (
+          (err as Error).message &&
+          err.message.includes('Inconsistent reuse of sequence number')
+        ) {
+          return;
+        }
+
         console.error(err);
       }
     };

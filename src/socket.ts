@@ -25,6 +25,10 @@ const Sockets = {
     socket.on(event, fn);
   },
 
+  off(socket: SocketIOClient.Socket, event: string) {
+    socket.off(event);
+  },
+
   emit(
     socket: SocketIOClient.Socket,
     event: 'sync_room_state' | 'update_presence' | 'authenticate',

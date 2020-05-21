@@ -118,6 +118,14 @@ export default class RoomClient {
     this._docClient.onSetDoc(callback);
   }
 
+  undo() {
+    return this._docClient.undo();
+  }
+
+  redo() {
+    return this._docClient.redo();
+  }
+
   // Presence
   setPresence<P extends Obj>(key: string, value: P) {
     this._presenceClient.setPresence(key, value);

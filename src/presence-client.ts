@@ -93,7 +93,7 @@ export default class PresenceClient {
     });
 
     // Immediately attempt to authorize via traditional auth
-    this._authorized = authorizeSocket(this._socket, session.token);
+    this._authorized = authorizeSocket(this._socket, session.token, room.id);
   }
 
   async setPresence<P>(key: string, value: P, options?: PresenceOptions) {

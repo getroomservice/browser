@@ -151,7 +151,7 @@ export default class DocClient<T extends Obj> {
     });
 
     // Immediately attempt to authorize via traditional auth
-    this._authorized = authorizeSocket(this._socket, session.token);
+    this._authorized = authorizeSocket(this._socket, session.token, room.id);
 
     // Required connect handler
     Sockets.on(this._socket, 'connect', () => {

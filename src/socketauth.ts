@@ -3,7 +3,8 @@ import invariant from 'invariant';
 
 export async function authorizeSocket(
   socket: SocketIOClient.Socket,
-  token: string
+  token: string,
+  roomId: string
 ): Promise<boolean> {
   return new Promise(resolve => {
     invariant(socket, 'Requires socket to be defined');
@@ -13,6 +14,9 @@ export async function authorizeSocket(
     }, 15000);
 
     Sockets.emit(socket, 'authenticate', {
+      meta: {
+        roomId
+      },
       payload: token,
     });
 

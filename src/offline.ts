@@ -11,7 +11,7 @@ import invariant from 'invariant';
 interface IOffline {
   getDoc: (roomRef: string, docId: string) => Promise<string>;
   setDoc: (roomRef: string, docId: string, value: string) => Promise<any>;
-  getOrCreateActor: () => Promise<string>;
+  getOrCreateActor: () => Promise<string | null>;
 }
 
 const Offline: IOffline = {
@@ -42,14 +42,19 @@ const Offline: IOffline = {
       "getOrCreateActor was used on the server side; this is a bug in the client, if you're seeing this, let us know."
     );
 
-    const actor = await get('rs:actor');
-    if (actor) {
-      return actor as string;
-    }
+    try {
+      const actor = await get('rs:actor');
+      if (actor) {
+        return actor as string;
+      }
 
-    const id = uuid();
-    set('rs:actor', id);
-    return id;
+      const id = uuid();
+      set('rs:actor', id);
+      return id;
+    } catch (err) {
+      console.warn('Cant use offline mode in this environment, skipping.');
+      return null;
+    }
   },
 };
 

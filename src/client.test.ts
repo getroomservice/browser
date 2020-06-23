@@ -65,16 +65,19 @@ test('room emits authenticate call', async () => {
 
   expect(uniq(urls.sort())).toStrictEqual(
     [
-      'https://api.roomservice.dev/v1/doc',
-      'https://api.roomservice.dev/v1/presence',
+      'https://aws.roomservice.dev/v1/doc',
+      'https://aws.roomservice.dev/v1/presence',
     ].sort()
   );
 
   expect(mockEmit.mock.calls[0]).toEqual([
     'authenticate',
-    { payload: 'short-lived-token', meta: {
-      roomId: "my-room-id"
-    } },
+    {
+      payload: 'short-lived-token',
+      meta: {
+        roomId: 'my-room-id',
+      },
+    },
   ]);
 });
 

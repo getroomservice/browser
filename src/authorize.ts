@@ -25,7 +25,7 @@ export default async function authorize(
     // or the debugger on roomservice.dev/app, which
     // uses this SDK.
     credentials:
-      authorizationUrl.includes('https://api.roomservice.dev') &&
+      authorizationUrl.includes('https://aws.roomservice.dev') &&
       authorizationUrl.includes('debugger-auth-endpoint')
         ? 'include'
         : undefined,

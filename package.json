@@ -52,7 +52,7 @@
     "invariant": "^2.2.4",
     "ky": "^0.16.1",
     "ky-universal": "^0.3.0",
-    "lodash": "^4.17.15",
+    "lodash": "^4.17.19",
     "lodash-es": "^4.17.15",
     "manymerge": "2.5.3",
     "safe-json-stringify": "^1.2.0",

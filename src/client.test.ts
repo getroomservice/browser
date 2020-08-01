@@ -72,9 +72,12 @@ test('room emits authenticate call', async () => {
 
   expect(mockEmit.mock.calls[0]).toEqual([
     'authenticate',
-    { payload: 'short-lived-token', meta: {
-      roomId: "my-room-id"
-    } },
+    {
+      payload: 'short-lived-token',
+      meta: {
+        roomId: 'my-room-id',
+      },
+    },
   ]);
 });
 

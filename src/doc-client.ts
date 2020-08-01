@@ -10,6 +10,7 @@ import Offline from './offline';
 import Sockets from './socket';
 import { Obj, Room, Session } from './types';
 import { authorizeSocket } from './socketauth';
+import ListenerManager from './ListenerManager';
 
 const DOC_NAMESPACE = '/v1/doc';
 
@@ -34,7 +35,8 @@ export default class DocClient<T extends Obj> {
   private _doc?: Doc<T>;
   private _actorId?: string | null;
   private _defaultDoc?: T;
-  private _authorized?: Promise<boolean>;
+  private _authorized?: Promise<boolean | undefined>;
+  private _listenerManager: ListenerManager;
 
   // We define this as a local variable to make testing easier
   _socketURL: string;
@@ -50,6 +52,7 @@ export default class DocClient<T extends Obj> {
     this._defaultDoc = parameters.defaultDoc;
     this._peer = new Peer(this._sendMsgToSocket);
     this._socketURL = ROOM_SERICE_CLIENT_URL;
+    this._listenerManager = new ListenerManager();
 
     // We define this here so we can debounce the save function
     // Otherwise we'll get quite the performance hit
@@ -134,7 +137,7 @@ export default class DocClient<T extends Obj> {
       transports: ['websocket'],
     });
 
-    Sockets.on(this._socket, 'reconnect_attempt', () => {
+    this._listenerManager.on(this._socket, 'reconnect_attempt', () => {
       invariant(this._socket);
       this._socket.io.opts.transports = ['websocket'];
     });
@@ -142,7 +145,7 @@ export default class DocClient<T extends Obj> {
     /**
      * Errors
      */
-    Sockets.on(this._socket, 'error', (data: string) => {
+    this._listenerManager.on(this._socket, 'error', (data: string) => {
       try {
         const { message } = JSON.parse(data);
         console.error(`Error from Socket: ${message}`);
@@ -155,13 +158,13 @@ export default class DocClient<T extends Obj> {
     this._authorized = authorizeSocket(this._socket, session.token, room.id);
 
     // Required connect handler
-    Sockets.on(this._socket, 'connect', () => {
+    this._listenerManager.on(this._socket, 'connect', () => {
       this._peer.notify(this._doc!);
       this.syncOfflineCache();
     });
 
     // Required disconnect handler
-    Sockets.on(this._socket, 'disconnect', reason => {
+    this._listenerManager.on(this._socket, 'disconnect', reason => {
       if (reason === 'io server disconnect') {
         console.warn(
           'The RoomService client was forcibly disconnected from the server, likely due to invalid auth.'
@@ -174,13 +177,25 @@ export default class DocClient<T extends Obj> {
      * optional
      */
     if (this._onUpdateSocketCallback) {
-      Sockets.on(this._socket, 'sync_room_state', this._onUpdateSocketCallback);
+      this._listenerManager.on(
+        this._socket,
+        'sync_room_state',
+        this._onUpdateSocketCallback
+      );
     }
     if (this._onConnectSocketCallback) {
-      Sockets.on(this._socket, 'connect', this._onConnectSocketCallback);
+      this._listenerManager.on(
+        this._socket,
+        'connect',
+        this._onConnectSocketCallback
+      );
     }
     if (this._onDisconnectSocketCallback) {
-      Sockets.on(this._socket, 'disconnect', this._onDisconnectSocketCallback);
+      this._listenerManager.on(
+        this._socket,
+        'disconnect',
+        this._onDisconnectSocketCallback
+      );
     }
 
     // Load the document of the room.
@@ -232,7 +247,13 @@ export default class DocClient<T extends Obj> {
 
     if (this._socket) {
       Sockets.disconnect(this._socket);
+      // Remove listeners after disconnect so that
+      // disconnect listener gets called
+      this._listenerManager.removeAllListeners(this._socket);
     }
+    this._onUpdateSocketCallback = undefined;
+    this._onConnectSocketCallback = undefined;
+    this._onDisconnectSocketCallback = undefined;
     this._socket = undefined;
   }
 
@@ -314,7 +335,7 @@ export default class DocClient<T extends Obj> {
       return;
     }
 
-    Sockets.on(this._socket, 'sync_room_state', socketCallback);
+    this._listenerManager.on(this._socket, 'sync_room_state', socketCallback);
   }
 
   onConnect(callback: () => any) {
@@ -331,7 +352,7 @@ export default class DocClient<T extends Obj> {
       return;
     }
 
-    this._socket.on('connect', callback);
+    this._listenerManager.on(this._socket, 'connect', callback);
   }
 
   onDisconnect(callback: () => any) {
@@ -348,7 +369,7 @@ export default class DocClient<T extends Obj> {
       return;
     }
 
-    this._socket.on('disconnect', callback);
+    this._listenerManager.on(this._socket, 'disconnect', callback);
   }
 
   private async syncOfflineCache(): Promise<Doc<T>> {
@@ -386,7 +407,13 @@ export default class DocClient<T extends Obj> {
     }
 
     const isAuthorized = await this._authorized;
-    if (!isAuthorized) {
+
+    // isAuthorized is undefined if the socket disconnects before we get an answer
+    if (!this._socket || isAuthorized === undefined) {
+      return;
+    }
+
+    if (isAuthorized === false) {
       console.error('Room Service is unable to authorize');
       return;
     }

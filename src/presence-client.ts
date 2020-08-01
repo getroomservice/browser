@@ -68,7 +68,7 @@ export default class PresenceClient {
   _roomReference: string;
   _roomId?: string;
   private _socket?: SocketIOClient.Socket;
-  private _authorized?: Promise<boolean>;
+  private _authorized?: Promise<boolean | undefined>;
 
   constructor(parameters: { authUrl: string; roomReference: string }) {
     this._socketURL = ROOM_SERICE_CLIENT_URL;

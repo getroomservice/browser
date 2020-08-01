@@ -88,7 +88,7 @@ export default class PresenceClient {
     });
 
     Sockets.on(this._socket, 'reconnect_attempt', () => {
-      invariant(this._socket);
+      invariant(this._socket, 'socket should be defined');
       this._socket.io.opts.transports = ['websocket'];
     });
 

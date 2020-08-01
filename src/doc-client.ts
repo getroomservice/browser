@@ -138,7 +138,7 @@ export default class DocClient<T extends Obj> {
     });
 
     this._listenerManager.on(this._socket, 'reconnect_attempt', () => {
-      invariant(this._socket);
+      invariant(this._socket, 'socket should be defined');
       this._socket.io.opts.transports = ['websocket'];
     });
 

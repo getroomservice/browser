@@ -22,5 +22,6 @@ export default class ListenerManager {
     this._listeners.forEach(listener => {
       Sockets.off(socket, listener.event, listener.callback);
     });
+    this._listeners = [];
   }
 }

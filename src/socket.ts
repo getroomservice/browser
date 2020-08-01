@@ -5,7 +5,7 @@
 import IO from 'socket.io-client';
 import invariant from 'invariant';
 
-type Events =
+export type Events =
   | 'connect'
   | 'disconnect'
   | 'error'
@@ -29,8 +29,12 @@ const Sockets = {
     socket.on(event, fn);
   },
 
-  off(socket: SocketIOClient.Socket, event: Events) {
-    socket.off(event);
+  off(
+    socket: SocketIOClient.Socket,
+    event: Events,
+    callback?: (...args: any[]) => void
+  ) {
+    socket.off(event, callback);
   },
 
   emit(

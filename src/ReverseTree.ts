@@ -122,7 +122,7 @@ export default class ReverseTree {
 
     // Search the left side of the tree
     function left(t: Tree): Tree {
-      if (!t.children || t.children.length == 0) {
+      if (!t.children || t.children.length === 0) {
         return t;
       }
 
@@ -140,7 +140,7 @@ export default class ReverseTree {
 
     // -- Do a depth-first traversal to get the result
     function postorder(t: Tree): string[] {
-      if (!t.children || t.children.length == 0) {
+      if (!t.children || t.children.length === 0) {
         return [];
       }
 

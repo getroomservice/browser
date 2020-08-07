@@ -51,7 +51,15 @@ export interface Document {
   localIndex: number;
 }
 
-export interface Context {
-  docs: { [key: string]: Document };
+export interface WebSocketLikeConnection {
+  onmessage: (ev: MessageEvent) => any;
+  send: (data: any) => any;
+}
+
+export interface DocumentContext {
+  lists: { [key: string]: ReverseTree };
+  maps: { [key: string]: { [key: string]: any } };
+  localIndex: number;
   actor: string;
+  id: string;
 }

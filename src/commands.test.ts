@@ -1,27 +1,15 @@
-import { runCommandLocally, newContext } from './commands';
+import { runCommandLocally } from './commands';
+import { newContext } from './context';
 import ReverseTree from './ReverseTree';
 
 test('lcreate creates a list', () => {
-  let ctx = newContext('me');
-  ctx.docs['my-doc'] = {
-    lists: {},
-    maps: {},
-    localIndex: 0,
-  };
-
+  let ctx = newContext('my-doc', 'me');
   ctx = runCommandLocally(ctx, ['lcreate', 'my-doc', 'my-list']);
-
-  const d = ctx.docs['my-doc'];
-  expect(d.lists['my-list']).toEqual(new ReverseTree('me'));
+  expect(ctx.lists['my-list']).toEqual(new ReverseTree('me'));
 });
 
 test('lins inserts an item', () => {
-  let ctx = newContext('me');
-  ctx.docs['my-doc'] = {
-    lists: {},
-    maps: {},
-    localIndex: 0,
-  };
+  let ctx = newContext('my-doc', 'me');
 
   ctx = runCommandLocally(ctx, ['lcreate', 'my-doc', 'my-list']);
   ctx = runCommandLocally(ctx, [
@@ -33,18 +21,11 @@ test('lins inserts an item', () => {
     'dogs',
   ]);
 
-  const d = ctx.docs['my-doc'];
-  expect(d.lists['my-list'].toArray()).toEqual(['dogs']);
+  expect(ctx.lists['my-list'].toArray()).toEqual(['dogs']);
 });
 
 test('lput updates an item', () => {
-  let ctx = newContext('me');
-  ctx.docs['my-doc'] = {
-    lists: {},
-    maps: {},
-    localIndex: 0,
-  };
-
+  let ctx = newContext('my-doc', 'me');
   ctx = runCommandLocally(ctx, ['lcreate', 'my-doc', 'my-list']);
   ctx = runCommandLocally(ctx, [
     'lins',
@@ -54,22 +35,20 @@ test('lput updates an item', () => {
     '1-blah',
     'dogs',
   ]);
-  ctx = runCommandLocally(ctx, ['lput', 'my-doc', 'my-list', '1-blah', 'cats']);
+  let d = runCommandLocally(ctx, [
+    'lput',
+    'my-doc',
+    'my-list',
+    '1-blah',
+    'cats',
+  ]);
 
-  const d = ctx.docs['my-doc'];
   expect(d.lists['my-list'].toArray()).toEqual(['cats']);
 });
 
 test('mcreate creates a map', () => {
-  let ctx = newContext('me');
-  ctx.docs['my-doc'] = {
-    lists: {},
-    maps: {},
-    localIndex: 0,
-  };
+  let ctx = newContext('my-doc', 'me');
 
   ctx = runCommandLocally(ctx, ['mcreate', 'my-doc', 'my-map']);
-
-  const d = ctx.docs['my-doc'];
-  expect(d.maps['my-map']).toBeTruthy();
+  expect(ctx.maps['my-map']).toBeTruthy();
 });

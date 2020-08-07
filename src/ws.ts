@@ -4,16 +4,12 @@ import {
   WebSocketClientMessage,
   WebSocketCmdMessage,
 } from './wsMessages';
+import { WebSocketLikeConnection } from 'types';
 
 type Cb = (body: any) => void;
 
 // Utility type to get the type of property
 type Prop<V, K extends keyof V> = V[K];
-
-interface WebSocketLikeConnection {
-  onmessage: (ev: MessageEvent) => any;
-  send: (data: any) => any;
-}
 
 export default class SuperlumeWebSocket {
   private conn: WebSocketLikeConnection;

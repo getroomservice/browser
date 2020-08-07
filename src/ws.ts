@@ -71,7 +71,7 @@ export default class SuperlumeWebSocket {
 
   unbind(msgType: string, callback: Cb) {
     this.callbacks[msgType] = this.callbacks[msgType].filter(
-      c => c != callback
+      c => c !== callback
     );
   }
 

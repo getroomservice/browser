@@ -48,11 +48,13 @@ export class DocumentClient<T extends any> {
   }
 
   async connect() {
+    const authenticated = this.once('guest:authenticated');
     this.ws.send('guest:authenticate', this.token);
-    await this.once('guest:authenticated');
+    await authenticated;
 
+    const joined = this.once('room:joined');
     this.ws.send('room:join', this.roomID);
-    await this.once('guest:joined');
+    await joined;
   }
 
   //   change(changeFn: (d: T) => void) {}

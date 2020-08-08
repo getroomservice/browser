@@ -53,8 +53,8 @@ export interface Document {
 
 export interface WebSocketLikeConnection {
   onmessage: (ev: MessageEvent) => any;
+  // onopen: (ev: MessageEvent) => any;
   send: (data: any) => any;
-  addEventListener: (msg: string, cb: (ev?: MessageEvent) => any) => any;
 }
 
 export interface DocumentContext {

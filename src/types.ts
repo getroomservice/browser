@@ -54,6 +54,7 @@ export interface Document {
 export interface WebSocketLikeConnection {
   onmessage: (ev: MessageEvent) => any;
   send: (data: any) => any;
+  addEventListener: (msg: string, cb: (ev?: MessageEvent) => any) => any;
 }
 
 export interface DocumentContext {
@@ -63,3 +64,6 @@ export interface DocumentContext {
   actor: string;
   id: string;
 }
+
+// Utility type to get the type of property
+export type Prop<V, K extends keyof V> = V[K];

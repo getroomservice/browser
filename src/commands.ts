@@ -59,7 +59,7 @@ function mcreate(ctx: DocumentContext, cmd: string[]) {
 }
 
 function mput(ctx: DocumentContext, cmd: string[]) {
-  invariant(cmd.length === 3);
+  invariant(cmd.length === 5);
   const [, docID, mapID, key, value] = cmd;
 
   invariant(ctx.id === docID);

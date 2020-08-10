@@ -47,7 +47,11 @@ export default class ReverseTree {
     }
   }
 
-  insert(after: 'root' | string, value: string, externalNewID?: string) {
+  insert(
+    after: 'root' | string,
+    value: string,
+    externalNewID?: string
+  ): string {
     invariant(this.log);
     let id = externalNewID;
     if (!id) {
@@ -69,6 +73,14 @@ export default class ReverseTree {
     if (!!this.nodes[itemID]) {
       this.nodes[itemID].value = value;
     }
+  }
+
+  has(itemID: string) {
+    return !!this.nodes[itemID];
+  }
+
+  get length() {
+    return Object.keys(this.nodes).length;
   }
 
   private toTree(): Tree {

@@ -72,9 +72,9 @@ function mput(ctx: DocumentContext, cmd: string[]) {
 }
 
 /**
- * Runs a command locally
+ * Runs any remote command
  */
-export function runCommandLocally(ctx: DocumentContext, cmd: string[]) {
+export function runRemoteCommandLocally(ctx: DocumentContext, cmd: string[]) {
   invariant(cmd.length > 1, `Unexpectedly short command: ${cmd}`);
 
   const keyword = cmd[0];
@@ -99,4 +99,28 @@ export function runCommandLocally(ctx: DocumentContext, cmd: string[]) {
   }
 
   return ctx;
+}
+
+// Run mput locally, return the resulting command
+export function runMput(
+  ctx: DocumentContext,
+  mapID: string,
+  key: string,
+  value: string
+): [DocumentContext, Array<string>] {
+  const cmd = ['mput', ctx.id, mapID, key, value];
+  mput(ctx, cmd);
+  return [ctx, cmd];
+}
+
+// Run lins locally, return the resulting command
+export function runLins(
+  ctx: DocumentContext,
+  listID: string,
+  after: string,
+  value: string
+): [DocumentContext, string, Array<string>] {
+  const id = ctx.lists[listID].insert(after, value);
+  const cmd = ['lins', ctx.id, listID, after, id, value];
+  return [ctx, id, cmd];
 }

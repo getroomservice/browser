@@ -4,7 +4,7 @@ import {
   DocumentContext,
   DocumentCheckpoint,
 } from 'types';
-import { runCommandLocally } from './commands';
+import { runRemoteCommandLocally } from './commands';
 import { newContextFromCheckpoint, toJSON } from './context';
 import { fetchSession, fetchDocument } from './remote';
 
@@ -61,7 +61,7 @@ export class DocumentClient<T extends any> {
 
   onChange(onChangeFn: (d: T, from: string) => void): Listener {
     const bound = this.ws.bind('doc:fwd', body => {
-      const newCtx = runCommandLocally(this.ctx, body.args);
+      const newCtx = runRemoteCommandLocally(this.ctx, body.args);
       const json = toJSON(newCtx);
       onChangeFn(json, body.from);
     });

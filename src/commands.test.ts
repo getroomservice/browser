@@ -1,18 +1,18 @@
-import { runCommandLocally } from './commands';
+import { runRemoteCommandLocally } from './commands';
 import { newContext } from './context';
 import ReverseTree from './ReverseTree';
 
 test('lcreate creates a list', () => {
   let ctx = newContext('my-doc', 'me');
-  ctx = runCommandLocally(ctx, ['lcreate', 'my-doc', 'my-list']);
+  ctx = runRemoteCommandLocally(ctx, ['lcreate', 'my-doc', 'my-list']);
   expect(ctx.lists['my-list']).toEqual(new ReverseTree('me'));
 });
 
 test('lins inserts an item', () => {
   let ctx = newContext('my-doc', 'me');
 
-  ctx = runCommandLocally(ctx, ['lcreate', 'my-doc', 'my-list']);
-  ctx = runCommandLocally(ctx, [
+  ctx = runRemoteCommandLocally(ctx, ['lcreate', 'my-doc', 'my-list']);
+  ctx = runRemoteCommandLocally(ctx, [
     'lins',
     'my-doc',
     'my-list',
@@ -26,8 +26,8 @@ test('lins inserts an item', () => {
 
 test('lput updates an item', () => {
   let ctx = newContext('my-doc', 'me');
-  ctx = runCommandLocally(ctx, ['lcreate', 'my-doc', 'my-list']);
-  ctx = runCommandLocally(ctx, [
+  ctx = runRemoteCommandLocally(ctx, ['lcreate', 'my-doc', 'my-list']);
+  ctx = runRemoteCommandLocally(ctx, [
     'lins',
     'my-doc',
     'my-list',
@@ -35,7 +35,7 @@ test('lput updates an item', () => {
     '1-blah',
     'dogs',
   ]);
-  let d = runCommandLocally(ctx, [
+  let d = runRemoteCommandLocally(ctx, [
     'lput',
     'my-doc',
     'my-list',
@@ -49,6 +49,6 @@ test('lput updates an item', () => {
 test('mcreate creates a map', () => {
   let ctx = newContext('my-doc', 'me');
 
-  ctx = runCommandLocally(ctx, ['mcreate', 'my-doc', 'my-map']);
+  ctx = runRemoteCommandLocally(ctx, ['mcreate', 'my-doc', 'my-map']);
   expect(ctx.maps['my-map']).toBeTruthy();
 });

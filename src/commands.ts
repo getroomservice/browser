@@ -124,3 +124,15 @@ export function runLins(
   const cmd = ['lins', ctx.id, listID, after, id, value];
   return [ctx, id, cmd];
 }
+
+// Run lput locally, return the resulting command
+export function runLput(
+  ctx: DocumentContext,
+  listID: string,
+  itemID: string,
+  value: string
+): [DocumentContext, Array<string>] {
+  ctx.lists[listID].put(itemID, value);
+  const cmd = ['lput', ctx.id, listID, itemID, value];
+  return [ctx, cmd];
+}

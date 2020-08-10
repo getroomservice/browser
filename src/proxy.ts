@@ -1,5 +1,5 @@
 import { DocumentContext } from './types';
-import { runLins, runMput } from './commands';
+import { runLins, runMput, runLput } from './commands';
 import SuperlumeWebSocket from './ws';
 import invariant from 'tiny-invariant';
 
@@ -142,7 +142,16 @@ export class ListProxyHandler<T extends Array<any>> implements ProxyHandler<T> {
       return true;
     }
 
-    // Puts (TODO)
-    return false;
+    // Put
+    const itemID = this.itemIDs[index];
+    invariant(itemID, 'No item id for this index');
+    const [ctx, cmd] = runLput(this.ctx, this.listID, itemID, value);
+    this.ctx = ctx;
+    this.ws.send('doc:cmd', {
+      args: cmd,
+      room: this.roomID,
+    });
+
+    return true;
   }
 }

@@ -6,8 +6,38 @@ const cp = {
   id: 'doc_123',
   index: 0,
   lists: {},
-  maps: {},
+  maps: {
+    root: {},
+  },
 };
+
+test('Document.change() will send ws messages', () => {
+  const conn = {
+    onmessage: (_?: MessageEvent) => {},
+    send: jest.fn(),
+  };
+  const client = new DocumentClient<any>({
+    actor: 'me',
+    checkpoint: cp,
+    roomID: 'room',
+    token: 'token',
+    conn: conn,
+  });
+
+  client.change(d => {
+    d.pet = 'hello';
+  });
+
+  const msgs = conn.send.mock.calls[0].map((s: string) => JSON.parse(s));
+
+  expect(msgs[0].body.args).toEqual([
+    'mput',
+    'doc_123',
+    'root',
+    'pet',
+    '"hello"',
+  ]);
+});
 
 test('DocumentClient.connect() will send authenticate and connect messages', done => {
   const conn = {

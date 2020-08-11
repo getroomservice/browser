@@ -7,6 +7,7 @@ import {
 import { runRemoteCommandLocally } from './commands';
 import { newContextFromCheckpoint, toJSON } from './context';
 import { fetchSession, fetchDocument } from './remote';
+import { MapProxyHandler } from './proxy';
 
 const WEBSOCKET_TIMEOUT = 1000 * 2;
 
@@ -17,6 +18,7 @@ export class DocumentClient<T extends any> {
   private ctx: DocumentContext;
   private token: string;
   private roomID: string;
+  private proxy: T;
 
   constructor(params: {
     conn: WebSocketLikeConnection;
@@ -29,6 +31,12 @@ export class DocumentClient<T extends any> {
     this.ctx = newContextFromCheckpoint(params.checkpoint, params.actor);
     this.token = params.token;
     this.roomID = params.roomID;
+
+    // TODO convert checkpoint into json
+    this.proxy = new Proxy(
+      {} as T,
+      new MapProxyHandler(this.roomID, 'root', this.ctx, this.ws)
+    );
   }
 
   private async once(msg: string) {
@@ -57,8 +65,10 @@ export class DocumentClient<T extends any> {
     await joined;
   }
 
-  // change(changeFn: (d: T) => void) {
-  // }
+  change(changeFn: (d: T) => void) {
+    changeFn(this.proxy);
+    return this.proxy;
+  }
 
   onChange(onChangeFn: (d: T, from: string) => void): Listener {
     const bound = this.ws.bind('doc:fwd', body => {

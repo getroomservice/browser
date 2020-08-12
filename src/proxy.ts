@@ -1,5 +1,5 @@
 import { DocumentContext } from './types';
-import { runLins, runMput, runLput } from './commands';
+import { runLins, runMput, runLput, runMDel } from './commands';
 import SuperlumeWebSocket from './ws';
 import invariant from 'tiny-invariant';
 
@@ -48,6 +48,25 @@ export class MapProxyHandler<T extends object> implements ProxyHandler<T> {
     });
 
     target[prop] = value;
+    return true;
+  }
+
+  deleteProperty(target: any, prop: string | number | symbol): boolean {
+    if (typeof prop === 'symbol') {
+      throw new Error('Room Service does not support symbols');
+    }
+    if (typeof prop === 'number') {
+      throw new Error('Unimplemented');
+    }
+
+    const [ctx, cmd] = runMDel(this.ctx, this.mapID, prop);
+    this.ctx = ctx;
+    this.ws.send('doc:cmd', {
+      room: this.roomID,
+      args: cmd,
+    });
+
+    delete target[prop];
     return true;
   }
 }

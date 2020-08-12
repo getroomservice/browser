@@ -71,6 +71,19 @@ function mput(ctx: DocumentContext, cmd: string[]) {
   ctx.localIndex++;
 }
 
+function mdel(ctx: DocumentContext, cmd: string[]) {
+  invariant(cmd.length === 4);
+  const [, docID, mapID, key] = cmd;
+
+  invariant(ctx.id === docID);
+  if (ctx.maps[mapID]) {
+    return; // noop
+  }
+
+  delete ctx.maps[mapID][key];
+  ctx.localIndex++;
+}
+
 /**
  * Runs any remote command
  */
@@ -110,6 +123,16 @@ export function runMput(
 ): [DocumentContext, Array<string>] {
   const cmd = ['mput', ctx.id, mapID, key, value];
   mput(ctx, cmd);
+  return [ctx, cmd];
+}
+
+export function runMDel(
+  ctx: DocumentContext,
+  mapID: string,
+  key: string
+): [DocumentContext, Array<string>] {
+  const cmd = ['mdel', ctx.id, mapID, key];
+  mdel(ctx, cmd);
   return [ctx, cmd];
 }
 

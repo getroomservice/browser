@@ -1,7 +1,8 @@
 import { DocumentClient } from './client';
 import { WebSocketClientMessage } from 'wsMessages';
+import { DocumentCheckpoint } from 'types';
 
-const cp = {
+const cp: DocumentCheckpoint = {
   api_version: 0,
   id: 'doc_123',
   index: 0,

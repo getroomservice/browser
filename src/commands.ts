@@ -1,6 +1,6 @@
 import ReverseTree from './ReverseTree';
 import invariant from 'tiny-invariant';
-import { DocumentContext } from './types';
+import { DocumentContext, Ref } from './types';
 
 function lcreate(ctx: DocumentContext, cmd: string[]) {
   invariant(cmd.length === 3);
@@ -30,6 +30,33 @@ function lins(ctx: DocumentContext, cmd: string[]) {
   ctx.localIndex++;
 }
 
+function linsref(ctx: DocumentContext, cmd: string[]) {
+  invariant(cmd.length === 6);
+  const [, docID, listID, afterID, newID, value] = cmd;
+
+  invariant(ctx.id === docID);
+  if (!ctx.lists[listID]) {
+    return; // out of order noop
+  }
+
+  const [type, ref] = value.split(':');
+  if (!type || !ref || !(type === 'list' || type === 'map')) {
+    throw new Error('Unexpected ref: ' + value);
+  }
+
+  let list = ctx.lists[listID];
+  list.insert(
+    afterID,
+    {
+      type,
+      ref,
+    },
+    newID
+  );
+
+  ctx.localIndex++;
+}
+
 function lput(ctx: DocumentContext, cmd: string[]) {
   invariant(cmd.length === 5);
   const [, docID, listID, itemID, value] = cmd;
@@ -41,6 +68,29 @@ function lput(ctx: DocumentContext, cmd: string[]) {
 
   let list = ctx.lists[listID];
   list.put(itemID, value);
+
+  ctx.localIndex++;
+}
+
+function lputref(ctx: DocumentContext, cmd: string[]) {
+  invariant(cmd.length === 5);
+  const [, docID, listID, itemID, value] = cmd;
+
+  invariant(ctx.id === docID);
+  if (!ctx.lists[listID]) {
+    return; // out of order noop
+  }
+
+  const [type, ref] = value.split(':');
+  if (!type || !ref || !(type === 'list' || type === 'map')) {
+    throw new Error('Unexpected ref: ' + value);
+  }
+
+  let list = ctx.lists[listID];
+  list.put(itemID, {
+    type,
+    ref,
+  });
 
   ctx.localIndex++;
 }
@@ -71,6 +121,26 @@ function mput(ctx: DocumentContext, cmd: string[]) {
   ctx.localIndex++;
 }
 
+function mputref(ctx: DocumentContext, cmd: string[]) {
+  invariant(cmd.length === 5);
+  const [, docID, mapID, key, value] = cmd;
+
+  invariant(ctx.id === docID);
+  if (ctx.maps[mapID]) {
+    return; // noop
+  }
+
+  const [type, ref] = value.split(':');
+  if (!type || !ref) {
+    throw new Error('Unexpected ref: ' + value);
+  }
+  ctx.maps[mapID][key] = {
+    ref,
+    type,
+  };
+  ctx.localIndex++;
+}
+
 function mdel(ctx: DocumentContext, cmd: string[]) {
   invariant(cmd.length === 4);
   const [, docID, mapID, key] = cmd;
@@ -98,14 +168,23 @@ export function runRemoteCommandLocally(ctx: DocumentContext, cmd: string[]) {
     case 'lins':
       lins(ctx, cmd);
       break;
+    case 'linsref':
+      linsref(ctx, cmd);
+      break;
     case 'lput':
       lput(ctx, cmd);
+      break;
+    case 'lputref':
+      lputref(ctx, cmd);
       break;
     case 'mcreate':
       mcreate(ctx, cmd);
       break;
     case 'mput':
       mput(ctx, cmd);
+      break;
+    case 'mputref':
+      mputref(ctx, cmd);
       break;
     default:
       throw new Error(`Unknown command '${keyword}'`);
@@ -123,6 +202,17 @@ export function runMput(
 ): [DocumentContext, Array<string>] {
   const cmd = ['mput', ctx.id, mapID, key, value];
   mput(ctx, cmd);
+  return [ctx, cmd];
+}
+
+export function runMputref(
+  ctx: DocumentContext,
+  listID: string,
+  itemID: string,
+  ref: Ref
+) {
+  const r = ref.type + ':' + ref.ref;
+  const cmd = ['mputref', ctx.id, listID, itemID, r];
   return [ctx, cmd];
 }
 
@@ -157,5 +247,17 @@ export function runLput(
 ): [DocumentContext, Array<string>] {
   ctx.lists[listID].put(itemID, value);
   const cmd = ['lput', ctx.id, listID, itemID, value];
+  return [ctx, cmd];
+}
+
+export function runLputref(
+  ctx: DocumentContext,
+  listID: string,
+  itemID: string,
+  ref: Ref
+) {
+  ctx.lists[listID].put(itemID, ref);
+  const r = ref.type + ':' + ref.ref;
+  const cmd = ['lputref', ctx.id, listID, itemID, r];
   return [ctx, cmd];
 }

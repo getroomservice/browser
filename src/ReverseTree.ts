@@ -1,4 +1,4 @@
-import { ListCheckpoint } from './types';
+import { ListCheckpoint, RefOrValue } from './types';
 import invariant from 'tiny-invariant';
 
 interface Node {
@@ -49,7 +49,7 @@ export default class ReverseTree {
 
   insert(
     after: 'root' | string,
-    value: string,
+    value: RefOrValue,
     externalNewID?: string
   ): string {
     invariant(this.log);
@@ -69,7 +69,7 @@ export default class ReverseTree {
     return id;
   }
 
-  put(itemID: string, value: string) {
+  put(itemID: string, value: RefOrValue) {
     if (!!this.nodes[itemID]) {
       this.nodes[itemID].value = value;
     }

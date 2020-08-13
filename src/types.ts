@@ -1,10 +1,19 @@
 import ReverseTree from './ReverseTree';
 
+export interface Ref {
+  type: 'map' | 'list';
+  ref: string;
+}
+
+export type RefOrValue = string | Ref;
+
 export type ListCheckpoint = Array<{
   after: string;
-  value: string;
+  value: RefOrValue;
   id: string;
 }>;
+
+export type MapCheckpoint = { [key: string]: RefOrValue };
 
 // A previous state of the document that came from superlume
 export interface DocumentCheckpoint {
@@ -12,7 +21,7 @@ export interface DocumentCheckpoint {
   index: number;
   api_version: number;
   lists: { [key: string]: ListCheckpoint };
-  maps: { [key: string]: any };
+  maps: { [key: string]: MapCheckpoint };
 }
 
 export interface Message<T> {

@@ -1,9 +1,9 @@
-import { ListCheckpoint, RefOrValue } from './types';
+import { ListCheckpoint, NodeValue } from './types';
 import invariant from 'tiny-invariant';
 
 interface Node {
   after: string;
-  value: any;
+  value: NodeValue;
   id: string;
 }
 
@@ -49,7 +49,7 @@ export default class ReverseTree {
 
   insert(
     after: 'root' | string,
-    value: RefOrValue,
+    value: NodeValue,
     externalNewID?: string
   ): string {
     invariant(this.log);
@@ -69,7 +69,7 @@ export default class ReverseTree {
     return id;
   }
 
-  put(itemID: string, value: RefOrValue) {
+  put(itemID: string, value: NodeValue) {
     if (!!this.nodes[itemID]) {
       this.nodes[itemID].value = value;
     }
@@ -77,6 +77,12 @@ export default class ReverseTree {
 
   has(itemID: string) {
     return !!this.nodes[itemID];
+  }
+
+  delete(itemID: string) {
+    this.nodes[itemID].value = {
+      t: '',
+    };
   }
 
   get length() {
@@ -158,7 +164,17 @@ export default class ReverseTree {
 
       let vals: string[] = [];
       for (let child of t.children) {
-        vals = vals.concat([child.value, ...postorder(child)]);
+        let value = child.value;
+        if (typeof child.value !== 'string') {
+          // Skip tombstones
+          if (child.value.t === '') {
+            vals = vals.concat([...postorder(child)]);
+            continue;
+          }
+          throw new Error('Unimplemented');
+        }
+
+        vals = vals.concat([value, ...postorder(child)]);
       }
 
       return vals;

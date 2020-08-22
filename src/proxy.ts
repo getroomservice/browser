@@ -1,5 +1,5 @@
 import { DocumentContext } from './types';
-import { runLins, runMput, runLput, runMDel } from './commands';
+import { runLins, runMput, runLput, runMDel, runLDel } from './commands';
 import SuperlumeWebSocket from './ws';
 import invariant from 'tiny-invariant';
 
@@ -78,7 +78,7 @@ export class ListProxyHandler<T extends Array<any>> implements ProxyHandler<T> {
   private listID: string;
 
   // Maps indexes to item ids
-  private itemIDs: { [key: number]: string } = {};
+  private itemIDs: Array<string> = [];
 
   constructor(
     roomID: string,
@@ -90,6 +90,52 @@ export class ListProxyHandler<T extends Array<any>> implements ProxyHandler<T> {
     this.ws = ws;
     this.roomID = roomID;
     this.listID = listID;
+  }
+
+  deleteProperty(_: T, prop: number): boolean {
+    invariant(this.itemIDs[prop]);
+
+    const itemID = this.itemIDs[prop];
+    delete this.itemIDs[prop];
+    const [ctx, cmd] = runLDel(this.ctx, this.listID, itemID);
+    this.ctx = ctx;
+    this.ws.send('doc:cmd', {
+      args: cmd,
+      room: this.roomID,
+    });
+
+    return true;
+  }
+
+  private insertListItem(after: string, index: number, value: object | string) {
+    // Embedded List
+    if (typeof value !== 'string' && Array.isArray(value)) {
+      const cmd = ['lcreate', this.ctx.id];
+      this.ws.send('doc:cmd', {
+        args: cmd,
+        room: this.roomID,
+      });
+    }
+
+    // Embedded Map
+    const [ctx, itemID, cmd] = runLins(this.ctx, this.listID, after, ins);
+    this.ctx = ctx;
+    this.ws.send('doc:cmd', {
+      args: cmd,
+      room: this.roomID,
+    });
+    this.itemIDs[index] = itemID;
+  }
+
+  private putListItem(index: number, value: string) {
+    const itemID = this.itemIDs[index];
+    invariant(itemID, 'No item id for this index');
+    const [ctx, cmd] = runLput(this.ctx, this.listID, itemID, value);
+    this.ctx = ctx;
+    this.ws.send('doc:cmd', {
+      args: cmd,
+      room: this.roomID,
+    });
   }
 
   set(target: any, prop: PropertyKey, value: any, __: any): boolean {
@@ -132,45 +178,19 @@ export class ListProxyHandler<T extends Array<any>> implements ProxyHandler<T> {
     if (extension === 0) {
       // Inserting the first item into the array.
       if (index === 0) {
-        const [ctx, itemID, cmd] = runLins(
-          this.ctx,
-          this.listID,
-          'root',
-          value
-        );
-        this.ctx = ctx;
-        this.ws.send('doc:cmd', {
-          args: cmd,
-          room: this.roomID,
-        });
-        this.itemIDs[index] = itemID;
+        this.insertListItem('root', index, value);
         return true;
       }
 
       // Inserting a later item
       const after = this.itemIDs[index - 1];
       invariant(after, 'No item id for previous index');
-      const [ctx, itemID, cmd] = runLins(this.ctx, this.listID, after, value);
-      this.ctx = ctx;
-      this.ws.send('doc:cmd', {
-        args: cmd,
-        room: this.roomID,
-      });
-      this.itemIDs[index] = itemID;
-
+      this.insertListItem(after, index, value);
       return true;
     }
 
     // Put
-    const itemID = this.itemIDs[index];
-    invariant(itemID, 'No item id for this index');
-    const [ctx, cmd] = runLput(this.ctx, this.listID, itemID, value);
-    this.ctx = ctx;
-    this.ws.send('doc:cmd', {
-      args: cmd,
-      room: this.roomID,
-    });
-
+    this.putListItem(index, value);
     return true;
   }
 }

@@ -5,15 +5,19 @@ export interface Ref {
   ref: string;
 }
 
-export type RefOrValue = string | Ref;
+export interface Tombstone {
+  t: '';
+}
+
+export type NodeValue = string | Ref | Tombstone;
 
 export type ListCheckpoint = Array<{
   after: string;
-  value: RefOrValue;
+  value: NodeValue;
   id: string;
 }>;
 
-export type MapCheckpoint = { [key: string]: RefOrValue };
+export type MapCheckpoint = { [key: string]: NodeValue };
 
 // A previous state of the document that came from superlume
 export interface DocumentCheckpoint {

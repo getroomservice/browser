@@ -255,9 +255,19 @@ export function runLputref(
   listID: string,
   itemID: string,
   ref: Ref
-) {
+): [DocumentContext, Array<string>] {
   ctx.lists[listID].put(itemID, ref);
   const r = ref.type + ':' + ref.ref;
   const cmd = ['lputref', ctx.id, listID, itemID, r];
+  return [ctx, cmd];
+}
+
+export function runLDel(
+  ctx: DocumentContext,
+  listID: string,
+  itemID: string
+): [DocumentContext, Array<string>] {
+  ctx.lists[listID].delete(itemID);
+  const cmd = ['ldel', ctx.id, listID, itemID];
   return [ctx, cmd];
 }

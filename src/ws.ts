@@ -62,6 +62,22 @@ export default class SuperlumeWebSocket {
     return callback;
   }
 
+  private async once(msg: string) {
+    let off: (args: any) => any;
+    return Promise.race([
+      new Promise((_, reject) =>
+        setTimeout(() => reject('timeout'), WEBSOCKET_TIMEOUT)
+      ),
+      new Promise(resolve => {
+        off = this.ws.bind(msg as any, body => {
+          resolve(body);
+        });
+      }),
+    ]).then(() => {
+      if (off) this.ws.unbind(msg, off);
+    });
+  }
+
   unbind(msgType: string, callback: Cb) {
     this.callbacks[msgType] = this.callbacks[msgType].filter(
       c => c !== callback

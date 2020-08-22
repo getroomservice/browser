@@ -48,3 +48,31 @@ test('reverse tree doesnt interweave', () => {
 
   expect(rt.toArray().join('')).toEqual('antsbirdscatsdogssomereallylongtext');
 });
+
+test('reverse tree can delete items', () => {
+  const rt = new ReverseTree('me');
+  const first = rt.insert('root', 'dog');
+  const second = rt.insert(first, 'cat');
+  const third = rt.insert(second, 'bird');
+  expect(rt.toArray()).toEqual(['dog', 'cat', 'bird']);
+
+  rt.delete(first);
+  expect(rt.toArray()).toEqual(['cat', 'bird']);
+
+  rt.delete(second);
+  expect(rt.toArray()).toEqual(['bird']);
+
+  rt.delete(third);
+  expect(rt.toArray()).toEqual([]);
+});
+
+test('can add items after a deleted item', () => {
+  const rt = new ReverseTree('me');
+  const first = rt.insert('root', 'dog');
+  const second = rt.insert(first, 'cat');
+
+  rt.delete(second);
+  rt.insert(second, 'bird');
+
+  expect(rt.toArray()).toEqual(['dog', 'bird']);
+});

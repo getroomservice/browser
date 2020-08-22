@@ -151,4 +151,16 @@ describe('list fixtures', () => {
       ['lput', 'doc', 'list', '0:me', 'cats'],
     ]);
   });
+
+  test('put map inside of list', () => {
+    expect(
+      getListCommandsWhen(p => {
+        p[0] = { pet: 'dog' };
+      })
+    ).toEqual([
+      ['lcreate', 'doc'],
+      ['lins', 'doc', 'list', 'root', '0:me', 'dogs'],
+      ['lput', 'doc', 'list', '0:me', 'cats'],
+    ]);
+  });
 });

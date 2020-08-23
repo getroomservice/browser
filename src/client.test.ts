@@ -1,4 +1,4 @@
-import { DocumentClient } from './client';
+import { RoomClient } from './client';
 import { WebSocketClientMessage } from 'wsMessages';
 import { DocumentCheckpoint } from 'types';
 
@@ -12,70 +12,12 @@ const cp: DocumentCheckpoint = {
   },
 };
 
-test('Document.change() will change the document', () => {
-  const conn = {
-    onmessage: (_?: MessageEvent) => {},
-    send: jest.fn(),
-  };
-  const client = new DocumentClient<any>({
-    actor: 'me',
-    checkpoint: cp,
-    roomID: 'room',
-    token: 'token',
-    conn: conn,
-  });
-
-  let foo = client.change(d => {
-    d.pet = 'dog';
-  });
-  foo = client.change(d => {
-    d.thing = 'hurray';
-  });
-  foo = client.change(d => {
-    d.newb = 'smile';
-  });
-
-  expect(foo).toEqual({
-    pet: 'dog',
-    thing: 'hurray',
-    newb: 'smile',
-  });
-});
-
-test('Document.change() will send ws messages', () => {
-  const conn = {
-    onmessage: (_?: MessageEvent) => {},
-    send: jest.fn(),
-  };
-  const client = new DocumentClient<any>({
-    actor: 'me',
-    checkpoint: cp,
-    roomID: 'room',
-    token: 'token',
-    conn: conn,
-  });
-
-  client.change(d => {
-    d.pet = 'hello';
-  });
-
-  const msgs = conn.send.mock.calls[0].map((s: string) => JSON.parse(s));
-
-  expect(msgs[0].body.args).toEqual([
-    'mput',
-    'doc_123',
-    'root',
-    'pet',
-    '"hello"',
-  ]);
-});
-
-test('DocumentClient.connect() will send authenticate and connect messages', done => {
+test('RoomClient.connect() will send authenticate and connect messages', done => {
   const conn = {
     onmessage: (_?: MessageEvent) => {},
     send: (_?: any) => {},
   };
-  const client = new DocumentClient({
+  const client = new RoomClient({
     actor: 'me',
     checkpoint: cp,
     roomID: 'room',

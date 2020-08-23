@@ -1,24 +1,20 @@
 import SuperlumeWebSocket from './ws';
 import {
   WebSocketLikeConnection,
-  DocumentContext,
   DocumentCheckpoint,
-} from 'types';
-import { runRemoteCommandLocally } from './commands';
-import { newContextFromCheckpoint, toJSON } from './context';
+  ObjectClient,
+} from './types';
 import { fetchSession, fetchDocument } from './remote';
-import { MapProxyHandler } from './proxy';
 
 const WEBSOCKET_TIMEOUT = 1000 * 2;
 
 type Listener = (args: any) => void;
 
-export class DocumentClient<T extends any> {
+export class RoomClient {
   private ws: SuperlumeWebSocket;
-  private ctx: DocumentContext;
   private token: string;
   private roomID: string;
-  private proxy: T;
+  private docID: string;
 
   constructor(params: {
     conn: WebSocketLikeConnection;
@@ -28,15 +24,9 @@ export class DocumentClient<T extends any> {
     roomID: string;
   }) {
     this.ws = new SuperlumeWebSocket(params.conn);
-    this.ctx = newContextFromCheckpoint(params.checkpoint, params.actor);
     this.token = params.token;
     this.roomID = params.roomID;
-
-    // TODO convert checkpoint into json
-    this.proxy = new Proxy(
-      {} as T,
-      new MapProxyHandler(this.roomID, 'root', this.ctx, this.ws)
-    );
+    this.docID = params.checkpoint.id;
   }
 
   private async once(msg: string) {
@@ -55,7 +45,10 @@ export class DocumentClient<T extends any> {
     });
   }
 
-  async connect() {
+  /**
+   * TODO: don't expose this function
+   */
+  async reconnect() {
     const authenticated = this.once('guest:authenticated');
     this.ws.send('guest:authenticate', this.token);
     await authenticated;
@@ -65,16 +58,24 @@ export class DocumentClient<T extends any> {
     await joined;
   }
 
-  change(changeFn: (d: T) => void) {
-    changeFn(this.proxy);
-    return this.proxy;
-  }
-
-  onChange(onChangeFn: (d: T, from: string) => void): Listener {
+  onUpdate(
+    obj: ObjectClient,
+    onChangeFn: (cmd: string[], from?: string) => {}
+  ): Listener {
     const bound = this.ws.bind('doc:fwd', body => {
-      const newCtx = runRemoteCommandLocally(this.ctx, body.args);
-      const json = toJSON(newCtx);
-      onChangeFn(json, body.from);
+      if (body.room !== this.roomID) return;
+      if (!body.args || body.args.length < 3) {
+        // Potentially a network failure, we don't want to crash,
+        // but do want to warn people
+        console.error('Unexpected command: ', body.args);
+        return;
+      }
+
+      const [docID, objID] = [body.args[1], body.args[2]];
+      if (docID !== this.docID) return;
+      if (objID !== obj.id) return;
+
+      onChangeFn(body.args, body.from);
     });
     return bound;
   }
@@ -82,29 +83,25 @@ export class DocumentClient<T extends any> {
   off(listener: Listener) {
     this.ws.unbind('doc:fwd', listener);
   }
-
-  async load(): Promise<T> {
-    return {} as T;
-  }
 }
 
-export async function document<T>(
+export async function room(
   conn: WebSocketLikeConnection,
   docsURL: string,
   provisionerURL: string,
   room: string,
   document: string
-): Promise<DocumentClient<T>> {
+): Promise<RoomClient> {
   const sess = await fetchSession(provisionerURL, room, document);
   const { body } = await fetchDocument(docsURL, sess.token, sess.docID);
-  const doc = new DocumentClient<T>({
+  const roomClient = new RoomClient({
     conn,
     actor: sess.guestID,
     checkpoint: body,
     token: sess.token,
     roomID: sess.roomID,
   });
-  await doc.connect();
+  await roomClient.reconnect();
 
-  return doc;
+  return roomClient;
 }

@@ -47,6 +47,13 @@ export default class ReverseTree {
     }
   }
 
+  get(itemID: string): NodeValue | undefined {
+    if (this.nodes[itemID]) {
+      return this.nodes[itemID].value;
+    }
+    return undefined;
+  }
+
   insert(
     after: 'root' | string,
     value: NodeValue,

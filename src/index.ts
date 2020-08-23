@@ -1,3 +1,3 @@
-import { DocumentClient } from './client';
+import { RoomService } from './RoomServiceClient';
 
-export { DocumentClient };
+export { RoomService };

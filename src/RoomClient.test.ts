@@ -1,6 +1,6 @@
-import { RoomClient } from './client';
-import { WebSocketClientMessage } from 'wsMessages';
-import { DocumentCheckpoint } from 'types';
+import { RoomClient } from './RoomClient';
+import { WebSocketClientMessage } from './wsMessages';
+import { DocumentCheckpoint } from './types';
 
 const cp: DocumentCheckpoint = {
   api_version: 0,
@@ -51,7 +51,7 @@ test('RoomClient.connect() will send authenticate and connect messages', done =>
     }
   };
 
-  client.connect().then(() => {
+  client.reconnect().then(() => {
     done();
   });
 });

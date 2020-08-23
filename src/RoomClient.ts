@@ -85,7 +85,7 @@ export class RoomClient {
   }
 }
 
-export async function room(
+export async function createRoom(
   conn: WebSocketLikeConnection,
   docsURL: string,
   provisionerURL: string,

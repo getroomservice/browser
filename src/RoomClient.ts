@@ -5,6 +5,8 @@ import {
   ObjectClient,
 } from './types';
 import { fetchSession, fetchDocument } from './remote';
+import { ListClient } from './ListClient';
+import { MapClient } from './MapClient';
 
 const WEBSOCKET_TIMEOUT = 1000 * 2;
 
@@ -15,6 +17,8 @@ export class RoomClient {
   private token: string;
   private roomID: string;
   private docID: string;
+  private actor: string;
+  private checkpoint: DocumentCheckpoint;
 
   constructor(params: {
     conn: WebSocketLikeConnection;
@@ -27,6 +31,8 @@ export class RoomClient {
     this.token = params.token;
     this.roomID = params.roomID;
     this.docID = params.checkpoint.id;
+    this.actor = params.actor;
+    this.checkpoint = params.checkpoint;
   }
 
   private async once(msg: string) {
@@ -56,6 +62,47 @@ export class RoomClient {
     const joined = this.once('room:joined');
     this.ws.send('room:join', this.roomID);
     await joined;
+  }
+
+  async list(name: string): Promise<ListClient> {
+    // create a list if it doesn't exist
+    if (!this.checkpoint.lists[name]) {
+      this.ws.send('doc:cmd', {
+        args: ['lcreate', this.docID, name],
+        room: this.roomID,
+      });
+    }
+
+    const l = new ListClient(
+      this.checkpoint.lists[name] || [],
+      this.roomID,
+      this.docID,
+      name,
+      this.ws,
+      this.actor
+    );
+
+    return l;
+  }
+
+  async map(name: string): Promise<MapClient> {
+    // Create this map if it doesn't exist
+    if (!this.checkpoint.maps[name]) {
+      this.ws.send('doc:cmd', {
+        args: ['mcreate', this.docID, name],
+        room: this.roomID,
+      });
+    }
+
+    const m = new MapClient(
+      this.checkpoint.maps[name] || {},
+      this.roomID,
+      this.docID,
+      name,
+      this.ws
+    );
+
+    return m;
   }
 
   onUpdate(

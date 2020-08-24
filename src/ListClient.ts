@@ -1,11 +1,9 @@
 import SuperlumeWebSocket from './ws';
-import { Tombstone } from './types';
+import { Tombstone, ObjectClient, ListCheckpoint } from './types';
 import ReverseTree from './ReverseTree';
 import { unescape, escape } from './escape';
-import { ObjectClient } from './ObjectClient';
 
 export class ListClient implements ObjectClient {
-  id: string;
   private roomID: string;
   private docID: string;
   private ws: SuperlumeWebSocket;
@@ -14,7 +12,10 @@ export class ListClient implements ObjectClient {
   // Map indexes to item ids
   private itemIDs: Array<string> = [];
 
+  id: string;
+
   constructor(
+    checkpoint: ListCheckpoint,
     roomID: string,
     docID: string,
     listID: string,
@@ -26,6 +27,11 @@ export class ListClient implements ObjectClient {
     this.id = listID;
     this.ws = ws;
     this.rt = new ReverseTree(actor);
+
+    this.rt.import(checkpoint);
+    for (let i = 0; i < checkpoint.length; i++) {
+      this.itemIDs.push(checkpoint[i].id);
+    }
   }
 
   private sendCmd(cmd: string[]) {
@@ -73,6 +79,7 @@ export class ListClient implements ObjectClient {
     if (!itemID) return undefined;
 
     const val = this.rt.get(itemID);
+    if (!val) return undefined;
     if (typeof val === 'object') {
       if ((val as Tombstone).t === '') {
         return undefined;

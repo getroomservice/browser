@@ -19,6 +19,7 @@ export class RoomClient {
   private docID: string;
   private actor: string;
   private checkpoint: DocumentCheckpoint;
+  private errorListener: any;
 
   constructor(params: {
     conn: WebSocketLikeConnection;
@@ -55,6 +56,15 @@ export class RoomClient {
    * TODO: don't expose this function
    */
   async reconnect() {
+    if (!this.errorListener) {
+      this.errorListener = this.ws.bind('error', err => {
+        console.error(
+          'Room Service encountered a server-side error. If you see this, please let us know; this could be a bug.',
+          err
+        );
+      });
+    }
+
     const authenticated = this.once('guest:authenticated');
     this.ws.send('guest:authenticate', this.token);
     await authenticated;

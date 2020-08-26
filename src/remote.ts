@@ -54,11 +54,21 @@ export async function fetchSession(
     }),
   });
 
+  if (res.status === 401) {
+    // Todo, make a better path for handling this
+    throw new Error('AuthURL returned unauthorized');
+  }
+
   const {
     token,
     guest_id: guestID,
     resources,
   } = (await res.json()) as ServerSession;
+
+  if (!resources || !token || !guestID) {
+    throw new Error('Invalid response from the AuthURL: ' + url);
+  }
+
   const docID = resources.find(r => r.object === 'document')!.id;
   const roomID = resources.find(r => r.object === 'room')!.id;
 

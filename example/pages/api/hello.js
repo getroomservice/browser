@@ -1,5 +1,11 @@
 // Next.js API route support: https://nextjs.org/docs/api-routes/introduction
 
+function getRandomInt(min, max) {
+  min = Math.ceil(min);
+  max = Math.floor(max);
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
 export default async (req, res) => {
   res.statusCode = 200;
 
@@ -10,7 +16,7 @@ export default async (req, res) => {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      guest: 'okay',
+      guest: `okay_${getRandomInt(0, 20000)}`,
       resources: [
         {
           reference: 'room',

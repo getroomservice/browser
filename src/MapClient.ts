@@ -39,7 +39,14 @@ export class MapClient implements ObjectClient {
     });
   }
 
-  update(cmd: string[]) {
+  private clone(): MapClient {
+    return Object.assign(
+      Object.create(Object.getPrototypeOf(this)),
+      this
+    ) as MapClient;
+  }
+
+  update(cmd: string[]): MapClient {
     if (cmd.length < 3) {
       throw new Error('Unexpected command: ' + cmd);
     }
@@ -72,13 +79,15 @@ export class MapClient implements ObjectClient {
       default:
         throw new Error('Unexpected command keyword: ' + keyword);
     }
+
+    return this.clone();
   }
 
   get(key: string) {
     return this.store[key];
   }
 
-  set(key: string, value: string | number) {
+  set(key: string, value: string | number): MapClient {
     const escaped = escape(value);
 
     // Local
@@ -86,13 +95,17 @@ export class MapClient implements ObjectClient {
 
     // Remote
     this.sendCmd(['mput', this.docID, this.id, key, escaped]);
+
+    return this.clone();
   }
 
-  delete(key: string) {
+  delete(key: string): MapClient {
     // local
     delete this.store[key];
 
     // remote
     this.sendCmd(['mdel', this.docID, this.id, key]);
+
+    return this.clone();
   }
 }

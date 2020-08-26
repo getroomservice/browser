@@ -11,11 +11,11 @@ export interface Tombstone {
 
 export type NodeValue = string | Ref | Tombstone;
 
-export type ListCheckpoint = Array<{
-  after: string;
-  value: NodeValue;
-  id: string;
-}>;
+export interface ListCheckpoint {
+  afters: string[];
+  ids: string[];
+  values: string[];
+}
 
 export type MapCheckpoint = { [key: string]: NodeValue };
 
@@ -24,6 +24,7 @@ export interface DocumentCheckpoint {
   id: string;
   index: number;
   api_version: number;
+  actors: { [key: number]: string };
   lists: { [key: string]: ListCheckpoint };
   maps: { [key: string]: MapCheckpoint };
 }

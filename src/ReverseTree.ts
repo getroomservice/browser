@@ -1,5 +1,6 @@
-import { ListCheckpoint, NodeValue } from './types';
+import { NodeValue, DocumentCheckpoint } from './types';
 import invariant from 'tiny-invariant';
+import { unescapeID } from './util';
 
 interface Node {
   after: string;
@@ -36,15 +37,26 @@ export default class ReverseTree {
     this.log = [];
   }
 
-  import(checkpoint: ListCheckpoint) {
+  import(checkpoint: DocumentCheckpoint, listID: string) {
     invariant(checkpoint);
-    this.log = checkpoint;
-    this.nodes = {};
+
+    const list = checkpoint.lists[listID];
+    const afters = list.afters || [];
+    const ids = list.ids || [];
+    const values = list.values || [];
 
     // Rehydrate the cache
-    for (let node of this.log) {
+    for (let i = 0; i < afters.length; i++) {
+      const node = {
+        after: unescapeID(checkpoint, afters[i]),
+        id: unescapeID(checkpoint, ids[i]),
+        value: values[i],
+      };
       this.nodes[node.id] = node;
+      this.log.push(node);
     }
+
+    this.count = this.log.length;
   }
 
   get(itemID: string): NodeValue | undefined {

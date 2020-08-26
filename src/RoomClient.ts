@@ -81,10 +81,17 @@ export class RoomClient {
         args: ['lcreate', this.docID, name],
         room: this.roomID,
       });
+
+      // Assume success
+      this.checkpoint.lists[name] = {
+        afters: [],
+        ids: [],
+        values: [],
+      };
     }
 
     const l = new ListClient(
-      this.checkpoint.lists[name] || [],
+      this.checkpoint,
       this.roomID,
       this.docID,
       name,
@@ -127,6 +134,9 @@ export class RoomClient {
         console.error('Unexpected command: ', body.args);
         return;
       }
+
+      // Ignore validated commands
+      if (body.from === this.actor) return;
 
       const [docID, objID] = [body.args[1], body.args[2]];
       if (docID !== this.docID) return;

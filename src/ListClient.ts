@@ -1,7 +1,8 @@
 import SuperlumeWebSocket from './ws';
-import { Tombstone, ObjectClient, ListCheckpoint } from './types';
+import { Tombstone, ObjectClient, DocumentCheckpoint } from './types';
 import ReverseTree from './ReverseTree';
 import { unescape, escape } from './escape';
+import { unescapeID } from './util';
 
 export class ListClient implements ObjectClient {
   private roomID: string;
@@ -15,7 +16,7 @@ export class ListClient implements ObjectClient {
   id: string;
 
   constructor(
-    checkpoint: ListCheckpoint,
+    checkpoint: DocumentCheckpoint,
     roomID: string,
     docID: string,
     listID: string,
@@ -28,9 +29,11 @@ export class ListClient implements ObjectClient {
     this.ws = ws;
     this.rt = new ReverseTree(actor);
 
-    this.rt.import(checkpoint);
-    for (let i = 0; i < checkpoint.length; i++) {
-      this.itemIDs.push(checkpoint[i].id);
+    this.rt.import(checkpoint, listID);
+    const list = checkpoint.lists[listID];
+    const ids = list.ids || [];
+    for (let i = 0; i < ids.length; i++) {
+      this.itemIDs.push(unescapeID(checkpoint, ids[i]));
     }
   }
 
@@ -41,7 +44,14 @@ export class ListClient implements ObjectClient {
     });
   }
 
-  update(cmd: string[]) {
+  private clone(): ListClient {
+    return Object.assign(
+      Object.create(Object.getPrototypeOf(this)),
+      this
+    ) as ListClient;
+  }
+
+  update(cmd: string[]): ListClient {
     if (cmd.length < 3) {
       throw new Error('Unexpected command: ' + cmd);
     }
@@ -72,6 +82,7 @@ export class ListClient implements ObjectClient {
       default:
         throw new Error('Unexpected command keyword: ' + keyword);
     }
+    return this.clone();
   }
 
   get(index: number) {
@@ -90,7 +101,7 @@ export class ListClient implements ObjectClient {
     return unescape(val);
   }
 
-  set(index: number, val: string | number) {
+  set(index: number, val: string | number): ListClient {
     let itemID = this.itemIDs[index];
     if (!itemID) {
       throw new Error('Unexpected');
@@ -102,20 +113,25 @@ export class ListClient implements ObjectClient {
 
     // Remote
     this.sendCmd(['lput', this.docID, this.id, itemID, escaped]);
+
+    return this.clone();
   }
 
-  delete(index: number) {
+  delete(index: number): ListClient {
     let itemID = this.itemIDs[index];
-    if (!itemID) return;
+    if (!itemID) return Object.assign({}, this) as ListClient;
 
     // Local
     this.rt.delete(itemID);
 
     // Remote
     this.sendCmd(['ldel', this.docID, this.id, itemID]);
+
+    Object.assign(Object.create(Object.getPrototypeOf(this)), this);
+    return this.clone();
   }
 
-  insertAfter(index: number, val: string | number) {
+  insertAfter(index: number, val: string | number): ListClient {
     let afterID = this.itemIDs[index];
     if (!afterID) {
       throw new RangeError(`List '${this.id}' has no index: '${index}'`);
@@ -128,9 +144,11 @@ export class ListClient implements ObjectClient {
 
     // Remote
     this.sendCmd(['lins', this.docID, this.id, afterID, itemID, escaped]);
+
+    return this.clone();
   }
 
-  push(val: string | number) {
+  push(val: string | number): ListClient {
     let lastID = 'root';
     if (this.itemIDs.length !== 0) {
       lastID = this.itemIDs[this.itemIDs.length - 1];
@@ -143,6 +161,8 @@ export class ListClient implements ObjectClient {
 
     // Remote
     this.sendCmd(['lins', this.docID, this.id, lastID, itemID, escaped]);
+
+    return this.clone();
   }
 
   toArray() {

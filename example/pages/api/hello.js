@@ -9,14 +9,17 @@ function getRandomInt(min, max) {
 export default async (req, res) => {
   res.statusCode = 200;
 
-  const r = await fetch('http://localhost:3453/', {
+  const API_KEY = 'nEK9OXZsk5G0gdEGieqwy';
+  const user = 'some-user-' + getRandomInt(1, 200);
+
+  const r = await fetch('https://super.roomservice.dev/provision', {
     method: 'post',
     headers: {
-      Authorization: 'Bearer: KMPpb2yt-2QMh1wY19M-v',
+      Authorization: `Bearer: ${API_KEY}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      guest: `okay_${getRandomInt(0, 20000)}`,
+      user: user,
       resources: [
         {
           reference: 'room',

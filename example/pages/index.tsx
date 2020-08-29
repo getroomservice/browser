@@ -11,16 +11,17 @@ export default function Home() {
         authURL: '/api/hello',
       });
 
-      const r = await rs.room('room');
-      const list = await r.list('todo');
+      const room = await rs.room('room');
+      const list = await room.list('todo');
       setList(list);
 
-      r.onUpdate(list, msg => {
+      // @ts-ignore
+      room.onUpdate(list, (msg, from) => {
         setList(list.update(msg));
       });
     }
 
-    load();
+    load().catch(console.error);
   }, []);
 
   const [text, setText] = useState('');
@@ -31,9 +32,11 @@ export default function Home() {
 
   return (
     <div>
-      <pre>{list && list.toArray()}</pre>
       <input type="text" value={text} onChange={e => setText(e.target.value)} />
       <button onClick={onClick}>Add TODO</button>
+      {((list && list.toArray().reverse()) || []).map(s => {
+        return <p>{s}</p>;
+      })}
     </div>
   );
 }

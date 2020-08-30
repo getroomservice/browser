@@ -15,9 +15,8 @@ export default function Home() {
       const list = await room.list('todo');
       setList(list);
 
-      // @ts-ignore
-      room.onUpdate(list, (msg, from) => {
-        setList(list.update(msg));
+      room.onUpdate(list, msg => {
+        setList(msg);
       });
     }
 

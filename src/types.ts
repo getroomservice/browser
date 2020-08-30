@@ -84,4 +84,5 @@ export type Prop<V, K extends keyof V> = V[K];
 
 export interface ObjectClient {
   id: string;
+  update(msg: any): ObjectClient;
 }

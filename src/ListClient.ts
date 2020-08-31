@@ -3,6 +3,7 @@ import { Tombstone, ObjectClient, DocumentCheckpoint } from './types';
 import ReverseTree from './ReverseTree';
 import { unescape, escape } from './escape';
 import { unescapeID } from './util';
+import invariant from 'tiny-invariant';
 
 export class ListClient implements ObjectClient {
   private roomID: string;
@@ -28,6 +29,11 @@ export class ListClient implements ObjectClient {
     this.id = listID;
     this.ws = ws;
     this.rt = new ReverseTree(actor);
+
+    invariant(
+      checkpoint.lists[listID],
+      `Unknown listid '${listID}' in checkpoint.`
+    );
 
     this.rt.import(checkpoint, listID);
     const list = checkpoint.lists[listID];
@@ -149,10 +155,7 @@ export class ListClient implements ObjectClient {
   }
 
   push(val: string | number): ListClient {
-    let lastID = 'root';
-    if (this.itemIDs.length !== 0) {
-      lastID = this.itemIDs[this.itemIDs.length - 1];
-    }
+    let lastID = this.rt.lastID();
     const escaped = escape(val);
 
     // Local
@@ -166,6 +169,6 @@ export class ListClient implements ObjectClient {
   }
 
   toArray() {
-    return this.rt.toArray();
+    return this.rt.toArray().map(m => unescape(m));
   }
 }

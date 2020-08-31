@@ -7,8 +7,7 @@ function getRandomInt(min, max) {
 }
 
 export default async (req, res) => {
-  res.statusCode = 200;
-
+  const body = JSON.parse(req.body);
   const API_KEY = 'nEK9OXZsk5G0gdEGieqwy';
   const user = 'some-user-' + getRandomInt(1, 200);
 
@@ -20,19 +19,7 @@ export default async (req, res) => {
     },
     body: JSON.stringify({
       user: user,
-      resources: [
-        {
-          reference: 'room',
-          object: 'room',
-          permission: 'join',
-        },
-        {
-          reference: 'default',
-          object: 'document',
-          permission: 'read_write',
-          room: 'room',
-        },
-      ],
+      resources: body.resources,
     }),
   });
 

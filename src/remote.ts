@@ -44,6 +44,7 @@ export async function fetchSession(
           object: 'document',
           reference: document,
           permission: 'read_write',
+          room: room,
         },
         {
           object: 'room',

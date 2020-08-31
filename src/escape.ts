@@ -9,7 +9,7 @@ export function unescape(value: string): string | number {
     value[0] === '"' &&
     value[value.length - 1] === '"'
   ) {
-    return value;
+    return value.slice(1, value.length - 1);
   }
 
   return parseInt(value);

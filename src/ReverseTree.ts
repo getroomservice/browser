@@ -152,21 +152,23 @@ export default class ReverseTree {
   }
 
   lastID(): string {
-    this.sortLog();
+    if (this.log.length === 0) {
+      return 'root';
+    }
 
-    // -- Convert the log into a regular tree
+    this.sortLog();
     const root = this.toTree();
 
-    // Search the left side of the tree
-    function left(t: Tree): Tree {
+    // Search the right side of the tree
+    function right(t: Tree): Tree {
       if (!t.children || t.children.length === 0) {
         return t;
       }
 
-      return left(t.children[0]);
+      return right(t.children[t.children.length - 1]);
     }
 
-    return left(root).id;
+    return right(root).id;
   }
 
   toArray(): Array<any> {

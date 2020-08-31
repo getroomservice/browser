@@ -2,4 +2,4 @@
 // export const DOCS_URL = 'http://localhost:3454';
 
 export const WS_URL = 'wss://super.roomservice.dev/ws';
-export const DOCS_URL = 'https://super.roomservice.dev';
+export const DOCS_URL = 'https://super.roomservice.dev/docs';

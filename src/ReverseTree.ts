@@ -75,8 +75,8 @@ export default class ReverseTree {
     let id = externalNewID;
     if (!id) {
       id = `${this.count}:${this.actor}`;
-      this.count++;
     }
+    this.count++;
 
     const node: Node = {
       after,

@@ -11,7 +11,7 @@ export default function Home() {
         authURL: '/api/hello',
       });
 
-      const room = await rs.room('newroom');
+      const room = await rs.room('wefae');
       const list = await room.list('todo');
       setList(list);
 

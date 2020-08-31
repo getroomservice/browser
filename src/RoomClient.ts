@@ -122,17 +122,17 @@ export class RoomClient {
     return m;
   }
 
-  onUpdate(list: ListClient, onChangeFn: (list: ListClient) => {}): Listener;
-  onUpdate(
+  subscribe(list: ListClient, onChangeFn: (list: ListClient) => {}): Listener;
+  subscribe(
     list: ListClient,
     onChangeFn: (list: ListClient, from: string) => {}
   ): Listener;
-  onUpdate(map: MapClient, onChangeFn: (map: MapClient) => {}): Listener;
-  onUpdate(
+  subscribe(map: MapClient, onChangeFn: (map: MapClient) => {}): Listener;
+  subscribe(
     map: MapClient,
     onChangeFn: (map: MapClient, from: string) => {}
   ): Listener;
-  onUpdate(obj: ObjectClient, onChangeFn: Function): Listener {
+  subscribe(obj: ObjectClient, onChangeFn: Function): Listener {
     const bound = this.ws.bind('doc:fwd', body => {
       if (body.room !== this.roomID) return;
       if (!body.args || body.args.length < 3) {
@@ -155,7 +155,7 @@ export class RoomClient {
     return bound;
   }
 
-  off(listener: Listener) {
+  unsubscribe(listener: Listener) {
     this.ws.unbind('doc:fwd', listener);
   }
 }

@@ -15,7 +15,7 @@ export default function Home() {
       const list = await room.list('todo');
       setList(list);
 
-      room.onUpdate(list, msg => {
+      room.subscribe(list, msg => {
         setList(msg);
       });
     }

@@ -24,7 +24,7 @@ export class PresenceClient {
     this.actor = actor;
     this.token = token;
     this.cache = {};
-    this.send = throttle(this.ws.send.bind(this.ws), 10);
+    this.send = throttle(this.ws.send.bind(this.ws), 35);
   }
 
   /**

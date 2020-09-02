@@ -79,6 +79,7 @@ interface Position {
 export default function Home() {
   const [presence, setPresence] = useState<PresenceClient>();
   const [positions, setPositions] = useState<{ [key: string]: Position }>({});
+  const [me, setMe] = useState('');
 
   useEffect(() => {
     async function load() {
@@ -89,6 +90,7 @@ export default function Home() {
       const room = await rs.room('wefae');
       const p = await room.presence();
       setPresence(p);
+      setMe(p.me);
 
       return room.subscribe<{ x: number; y: number }>(p, 'position', msg => {
         setPositions(msg);
@@ -122,6 +124,7 @@ export default function Home() {
         Hello! This demo works better with friends. Share the link with someone!
       </div>
       {values.map(([guest, pos]) => {
+        if (guest === me) return;
         return <Cursor key={guest} x={pos.x} y={pos.y} />;
       })}
     </div>

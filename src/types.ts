@@ -29,6 +29,13 @@ export interface DocumentCheckpoint {
   maps: { [key: string]: MapCheckpoint };
 }
 
+interface PresenceObject<T> {
+  expAt: Date;
+  value: T;
+}
+
+export type PresenceCheckpoint<T> = { [key: string]: PresenceObject<T> };
+
 export interface Message<T> {
   ref: string;
   type: string;

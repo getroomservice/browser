@@ -7,6 +7,8 @@ import {
 import { fetchSession, fetchDocument } from './remote';
 import { ListClient } from './ListClient';
 import { MapClient } from './MapClient';
+import { PresenceClient } from './PresenceClient';
+import invariant from 'tiny-invariant';
 
 const WEBSOCKET_TIMEOUT = 1000 * 2;
 
@@ -122,17 +124,41 @@ export class RoomClient {
     return m;
   }
 
-  subscribe(list: ListClient, onChangeFn: (list: ListClient) => {}): Listener;
+  subscribe(list: ListClient, onChangeFn: (list: ListClient) => any): Listener;
   subscribe(
     list: ListClient,
-    onChangeFn: (list: ListClient, from: string) => {}
+    onChangeFn: (list: ListClient, from: string) => any
   ): Listener;
   subscribe(map: MapClient, onChangeFn: (map: MapClient) => {}): Listener;
   subscribe(
     map: MapClient,
-    onChangeFn: (map: MapClient, from: string) => {}
+    onChangeFn: (map: MapClient, from: string) => any
   ): Listener;
-  subscribe(obj: ObjectClient, onChangeFn: Function): Listener {
+  subscribe<T extends any>(
+    presence: PresenceClient,
+    key: string,
+    onChangeFn: (obj: { [key: string]: T }, from: string) => any
+  ): Listener;
+  subscribe(
+    obj: ObjectClient | PresenceClient,
+    onChangeFnOrString: Function | string,
+    onChangeFn?: Function
+  ): Listener {
+    // Presence handler
+    if (typeof onChangeFnOrString === 'string') {
+      const bound = this.ws.bind('presence:fwd', body => {
+        if (body.room !== this.roomID) return;
+        if (body.key !== onChangeFnOrString) return;
+        if (body.from === this.actor) return;
+        const newObj = obj.update(body);
+        invariant(onChangeFn);
+        onChangeFn(newObj);
+      });
+
+      return bound;
+    }
+
+    // Map and list handler
     const bound = this.ws.bind('doc:fwd', body => {
       if (body.room !== this.roomID) return;
       if (!body.args || body.args.length < 3) {
@@ -147,10 +173,10 @@ export class RoomClient {
 
       const [docID, objID] = [body.args[1], body.args[2]];
       if (docID !== this.docID) return;
-      if (objID !== obj.id) return;
+      if (objID !== (obj as ObjectClient).id) return;
 
-      const newObj = obj.update(body.args);
-      onChangeFn(newObj, body.from);
+      const newObj = (obj as ObjectClient).update(body.args);
+      onChangeFnOrString(newObj, body.from);
     });
     return bound;
   }

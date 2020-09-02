@@ -1,4 +1,20 @@
-import { Message, DocumentCheckpoint } from './types';
+import { Message, DocumentCheckpoint, PresenceCheckpoint } from './types';
+
+export async function fetchPresence<T extends any>(
+  url: string,
+  token: string,
+  roomID: string,
+  key: string
+): Promise<PresenceCheckpoint<T>> {
+  const res = await fetch(url + '/' + roomID + '/' + encodeURIComponent(key), {
+    headers: {
+      Authorization: 'Bearer: ' + token,
+    },
+  });
+
+  const doc = await res.json();
+  return doc as PresenceCheckpoint<T>;
+}
 
 export async function fetchDocument(
   url: string,

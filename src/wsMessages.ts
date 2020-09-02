@@ -24,7 +24,7 @@ export interface WebSocketJoinedMessage {
   body: string;
 }
 
-export interface WebSocketCmdMessage {
+export interface WebSocketDocCmdMessage {
   ver: number;
   type: 'doc:cmd';
   body: {
@@ -34,17 +34,41 @@ export interface WebSocketCmdMessage {
   ts: string;
 }
 
-export interface WebSocketFwdMessage {
+export interface WebSocketDocFwdMessage {
   ver: number;
   type: 'doc:fwd';
   body: {
-    from: string;
+    from: string; // a guest id
     room: string;
     args: string[];
   };
 }
 
-export interface WebSocketErorrMessage {
+export interface WebSocketPresenceCmdMessage {
+  ver: number;
+  type: 'presence:cmd';
+  body: {
+    room: string;
+    key: string;
+    value: string;
+    expAt: number; // unix timestamp
+  };
+  ts: string;
+}
+
+export interface WebSocketPresenceFwdMessage {
+  ver: number;
+  type: 'presence:fwd';
+  body: {
+    from: string; // a guest id
+    room: string;
+    key: string;
+    value: string;
+    expAt: number; // unix timestamp
+  };
+}
+
+export interface WebSocketErrorMessage {
   ver: number;
   type: 'error';
   body: {
@@ -56,12 +80,14 @@ export interface WebSocketErorrMessage {
 // Messages coming from the server
 export type WebSocketServerMessage =
   | WebSocketAuthenticatedMessage
-  | WebSocketFwdMessage
+  | WebSocketDocFwdMessage
+  | WebSocketPresenceFwdMessage
   | WebSocketJoinedMessage
-  | WebSocketErorrMessage;
+  | WebSocketErrorMessage;
 
 // Messages coming from the client
 export type WebSocketClientMessage =
   | WebSocketAuthenticateMessage
-  | WebSocketCmdMessage
+  | WebSocketDocCmdMessage
+  | WebSocketPresenceCmdMessage
   | WebSocketJoinMessage;

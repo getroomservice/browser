@@ -1,8 +1,10 @@
 import {
   WebSocketServerMessage,
-  WebSocketFwdMessage,
+  WebSocketDocFwdMessage,
   WebSocketClientMessage,
-  WebSocketCmdMessage,
+  WebSocketDocCmdMessage,
+  WebSocketPresenceCmdMessage,
+  WebSocketPresenceFwdMessage,
 } from './wsMessages';
 import { WebSocketLikeConnection, Prop } from 'types';
 
@@ -36,7 +38,11 @@ export default class SuperlumeWebSocket {
 
   send(msgType: 'room:join', room: string): void;
   send(msgType: 'guest:authenticate', token: string): void;
-  send(msgType: 'doc:cmd', body: Prop<WebSocketCmdMessage, 'body'>): void;
+  send(msgType: 'doc:cmd', body: Prop<WebSocketDocCmdMessage, 'body'>): void;
+  send(
+    msgType: 'presence:cmd',
+    body: Prop<WebSocketPresenceCmdMessage, 'body'>
+  ): void;
   send(msgType: Prop<WebSocketClientMessage, 'type'>, body: any): void {
     const ts = this.timestamp();
     const msg: WebSocketClientMessage = {
@@ -52,7 +58,11 @@ export default class SuperlumeWebSocket {
   bind(msgType: 'room:joined', callback: (body: string) => void): Cb;
   bind(
     msgType: 'doc:fwd',
-    callback: (body: Prop<WebSocketFwdMessage, 'body'>) => void
+    callback: (body: Prop<WebSocketDocFwdMessage, 'body'>) => void
+  ): Cb;
+  bind(
+    msgType: 'presence:fwd',
+    callback: (body: Prop<WebSocketPresenceFwdMessage, 'body'>) => void
   ): Cb;
   bind(msgType: 'guest:authenticated', callback: (body: string) => void): Cb;
   bind(msgType: 'error', callback: (body: string) => void): Cb;

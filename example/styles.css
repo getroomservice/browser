@@ -1,0 +1,10 @@
+html,
+body {
+  padding: 0;
+  margin: 0;
+}
+
+.window {
+  height: 100vh;
+  width: 100%;
+}

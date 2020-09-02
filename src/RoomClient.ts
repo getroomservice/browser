@@ -124,6 +124,11 @@ export class RoomClient {
     return m;
   }
 
+  async presence(): Promise<PresenceClient> {
+    const p = new PresenceClient(this.roomID, this.ws, this.actor, this.token);
+    return p;
+  }
+
   subscribe(list: ListClient, onChangeFn: (list: ListClient) => any): Listener;
   subscribe(
     list: ListClient,
@@ -139,20 +144,24 @@ export class RoomClient {
     key: string,
     onChangeFn: (obj: { [key: string]: T }, from: string) => any
   ): Listener;
-  subscribe(
+  subscribe<T extends any>(
     obj: ObjectClient | PresenceClient,
     onChangeFnOrString: Function | string,
-    onChangeFn?: Function
+    onChangeFn?: (obj: { [key: string]: T }, from: string) => any
   ): Listener {
     // Presence handler
     if (typeof onChangeFnOrString === 'string') {
+      invariant(
+        obj,
+        'subscribe() expects the first argument to not be undefined.'
+      );
       const bound = this.ws.bind('presence:fwd', body => {
         if (body.room !== this.roomID) return;
         if (body.key !== onChangeFnOrString) return;
         if (body.from === this.actor) return;
         const newObj = obj.update(body);
         invariant(onChangeFn);
-        onChangeFn(newObj);
+        onChangeFn(newObj, body.from);
       });
 
       return bound;

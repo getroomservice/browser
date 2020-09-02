@@ -3,6 +3,7 @@ import { PresenceCheckpoint, Prop } from './types';
 import { fetchPresence } from './remote';
 import { PRESENCE_URL } from './constants';
 import { WebSocketPresenceFwdMessage } from './wsMessages';
+import throttle from './throttle';
 
 export class PresenceClient {
   private roomID: string;
@@ -10,6 +11,7 @@ export class PresenceClient {
   private actor: string;
   private token: string;
   private cache: { [key: string]: PresenceCheckpoint<any> };
+  private send: Prop<SuperlumeWebSocket, 'send'>;
 
   constructor(
     roomID: string,
@@ -22,6 +24,7 @@ export class PresenceClient {
     this.actor = actor;
     this.token = token;
     this.cache = {};
+    this.send = throttle(this.ws.send.bind(this.ws), 10);
   }
 
   /**
@@ -41,7 +44,7 @@ export class PresenceClient {
   }
 
   private withoutExpired(key: string) {
-    const vals = {};
+    const vals = {} as any;
     for (let actor in this.cache[key]) {
       const obj = this.cache[key][actor];
       if (new Date() > obj.expAt) {
@@ -51,6 +54,10 @@ export class PresenceClient {
       vals[actor] = obj.value;
     }
     return vals;
+  }
+
+  get me() {
+    return this.actor;
   }
 
   /**
@@ -68,12 +75,16 @@ export class PresenceClient {
     // Convert to unix + add seconds
     const expAt = Math.round(new Date().getTime() / 1000) + addition;
 
-    this.ws.send('presence:cmd', {
+    this.send('presence:cmd', {
       room: this.roomID,
       key: key,
-      value: value,
+      value: JSON.stringify(value),
       expAt: expAt,
     });
+
+    if (!this.cache[key]) {
+      this.cache[key] = {};
+    }
 
     this.cache[key][this.actor] = {
       value,
@@ -89,7 +100,7 @@ export class PresenceClient {
 
     const obj = {
       expAt: new Date(body.expAt * 1000),
-      value: body.value,
+      value: JSON.parse(body.value),
     };
 
     if (!this.cache[body.key]) {

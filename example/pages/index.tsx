@@ -8,7 +8,7 @@ function Cursor(props: { fill?: string; x: number; y: number }) {
       style={{
         position: 'absolute',
         transform: `translate(${props.x}px, ${props.y}px)`,
-        transition: 'transform 0.15s ease-out, opacity 0.15s',
+        transition: 'transform 0.20s ease-out',
         top: 0,
         left: 0,
       }}

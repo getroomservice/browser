@@ -31,7 +31,7 @@ export class PresenceClient {
    * Gets all values for an identifier, organized by user id.
    * @param key the identifier. Ex: "position"
    */
-  async getAll<T extends any>(key: string): Promise<PresenceCheckpoint<T>> {
+  async getAll<T extends any>(key: string): Promise<{ [key: string]: T }> {
     const val = await fetchPresence<T>(
       PRESENCE_URL,
       this.token,
@@ -40,7 +40,7 @@ export class PresenceClient {
     );
     this.cache[key] = val;
 
-    return val;
+    return this.withoutExpired(key);
   }
 
   private withoutExpired(key: string) {

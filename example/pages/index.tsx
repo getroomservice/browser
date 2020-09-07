@@ -1,6 +1,7 @@
 import { RoomService } from '@roomservice/browser';
 import { useEffect, useState } from 'react';
 import { PresenceClient } from '../../dist/PresenceClient';
+import { PresenceCheckpoint } from '../../dist/types';
 
 function Cursor(props: { fill?: string; x: number; y: number }) {
   return (
@@ -92,7 +93,9 @@ export default function Home() {
       setPresence(p);
       setMe(p.me);
 
-      return room.subscribe<{ x: number; y: number }>(p, 'position', msg => {
+      const v = await p.getAll<Position>('position');
+      setPositions(v);
+      return room.subscribe<Position>(p, 'position', msg => {
         setPositions(msg);
       });
     }

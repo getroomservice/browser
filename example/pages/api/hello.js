@@ -24,7 +24,6 @@ export default async (req, res) => {
   });
 
   const json = await r.json();
-  console.log(json);
 
   res.json(json);
 };

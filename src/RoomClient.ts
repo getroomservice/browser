@@ -3,6 +3,7 @@ import {
   WebSocketLikeConnection,
   DocumentCheckpoint,
   ObjectClient,
+  AuthStrategy,
 } from './types';
 import { fetchSession, fetchDocument } from './remote';
 import { ListClient } from './ListClient';
@@ -198,11 +199,11 @@ export class RoomClient {
 export async function createRoom(
   conn: WebSocketLikeConnection,
   docsURL: string,
-  provisionerURL: string,
+  authStrategy: AuthStrategy,
   room: string,
   document: string
 ): Promise<RoomClient> {
-  const sess = await fetchSession(provisionerURL, room, document);
+  const sess = await fetchSession(authStrategy, room, document);
   const { body } = await fetchDocument(docsURL, sess.token, sess.docID);
   const roomClient = new RoomClient({
     conn,

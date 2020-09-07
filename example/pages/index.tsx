@@ -84,7 +84,7 @@ export default function Home() {
   useEffect(() => {
     async function load() {
       const rs = new RoomService({
-        authURL: '/api/hello',
+        auth: '/api/hello',
       });
 
       const room = await rs.room('wefae');

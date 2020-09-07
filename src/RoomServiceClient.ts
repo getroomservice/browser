@@ -1,16 +1,16 @@
 import { WS_URL, DOCS_URL } from './constants';
 import { createRoom } from './RoomClient';
-import { WebSocketLikeConnection } from 'types';
+import { WebSocketLikeConnection, AuthStrategy } from 'types';
 
 interface RoomServiceParameters {
-  authURL: string;
+  auth: AuthStrategy;
 }
 
 export class RoomService {
-  private authURL: string;
+  private auth: AuthStrategy;
 
   constructor(params: RoomServiceParameters) {
-    this.authURL = params.authURL;
+    this.auth = params.auth;
   }
 
   async room(name: string) {
@@ -18,7 +18,7 @@ export class RoomService {
     return createRoom(
       ws as WebSocketLikeConnection,
       DOCS_URL,
-      this.authURL,
+      this.auth,
       name,
       'default'
     );

@@ -1,4 +1,9 @@
-import { Message, DocumentCheckpoint, PresenceCheckpoint } from './types';
+import {
+  Message,
+  DocumentCheckpoint,
+  PresenceCheckpoint,
+  AuthStrategy,
+} from './types';
 
 export async function fetchPresence<T extends any>(
   url: string,
@@ -33,7 +38,7 @@ export async function fetchDocument(
 
 export interface ServerSession {
   token: string;
-  guest_id: string;
+  user_id: string;
   resources: Array<{
     id: string;
     object: 'document' | 'room';
@@ -48,10 +53,26 @@ export interface LocalSession {
 }
 
 export async function fetchSession(
-  url: string,
+  strategy: AuthStrategy,
   room: string,
   document: string
 ): Promise<LocalSession> {
+  // A user defined function
+  if (typeof strategy === 'function') {
+    const result = await strategy(room);
+    const docID = result.resources.find(r => r.object === 'document')!.id;
+    const roomID = result.resources.find(r => r.object === 'room')!.id;
+
+    return {
+      token: result.token,
+      guestID: result.user_id,
+      docID,
+      roomID,
+    };
+  }
+
+  // The generic function
+  const url = strategy;
   const res = await fetch(url, {
     method: 'POST',
     body: JSON.stringify({
@@ -78,7 +99,7 @@ export async function fetchSession(
 
   const {
     token,
-    guest_id: guestID,
+    user_id: guestID,
     resources,
   } = (await res.json()) as ServerSession;
 

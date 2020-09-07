@@ -93,3 +93,19 @@ export interface ObjectClient {
   id: string;
   update(msg: any): ObjectClient;
 }
+
+export interface Resource {
+  id: string;
+  object: string;
+  reference: string;
+  permission: 'read_write' | 'join';
+}
+
+export interface AuthResponse {
+  token: string;
+  user_id: string;
+  resources: Resource[];
+}
+
+export type AuthFunction = (room: string) => Promise<AuthResponse>;
+export type AuthStrategy = string | AuthFunction;

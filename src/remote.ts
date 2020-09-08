@@ -38,7 +38,7 @@ export async function fetchDocument(
 
 export interface ServerSession {
   token: string;
-  user_id: string;
+  user: string;
   resources: Array<{
     id: string;
     object: 'document' | 'room';
@@ -47,7 +47,7 @@ export interface ServerSession {
 
 export interface LocalSession {
   token: string;
-  guestID: string;
+  guestReference: string;
   docID: string;
   roomID: string;
 }
@@ -60,12 +60,16 @@ export async function fetchSession(
   // A user defined function
   if (typeof strategy === 'function') {
     const result = await strategy(room);
+    if (!result.user) {
+      throw new Error(`The auth function must return a 'user' key.`);
+    }
+
     const docID = result.resources.find(r => r.object === 'document')!.id;
     const roomID = result.resources.find(r => r.object === 'room')!.id;
 
     return {
       token: result.token,
-      guestID: result.user_id,
+      guestReference: result.user,
       docID,
       roomID,
     };
@@ -97,13 +101,9 @@ export async function fetchSession(
     throw new Error('AuthURL returned unauthorized');
   }
 
-  const {
-    token,
-    user_id: guestID,
-    resources,
-  } = (await res.json()) as ServerSession;
+  const { token, user, resources } = (await res.json()) as ServerSession;
 
-  if (!resources || !token || !guestID) {
+  if (!resources || !token || !user) {
     throw new Error('Invalid response from the AuthURL: ' + url);
   }
 
@@ -112,7 +112,7 @@ export async function fetchSession(
 
   return {
     token,
-    guestID,
+    guestReference: user,
     docID,
     roomID,
   };

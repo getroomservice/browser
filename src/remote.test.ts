@@ -14,7 +14,10 @@ test('Test fetchSession', async () => {
         },
       ],
       token: 'some-token',
-      user_id: 'some_user_id',
+      user: {
+        id: 'some_user_id',
+        reference: 'my-user',
+      },
     };
   });
 

@@ -207,7 +207,7 @@ export async function createRoom(
   const { body } = await fetchDocument(docsURL, sess.token, sess.docID);
   const roomClient = new RoomClient({
     conn,
-    actor: sess.guestID,
+    actor: sess.guestReference,
     checkpoint: body,
     token: sess.token,
     roomID: sess.roomID,

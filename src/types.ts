@@ -103,7 +103,7 @@ export interface Resource {
 
 export interface AuthResponse {
   token: string;
-  user_id: string;
+  user: string;
   resources: Resource[];
 }
 

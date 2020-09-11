@@ -8,10 +8,10 @@ function getRandomInt(min, max) {
 
 export default async (req, res) => {
   const body = JSON.parse(req.body);
-  const API_KEY = 'nEK9OXZsk5G0gdEGieqwy';
+  const API_KEY = '-4_Cyf4ouI7p9lCW_Tlii';
   const user = 'some-user-' + getRandomInt(1, 200);
 
-  const r = await fetch('https://super.roomservice.dev/provision', {
+  const r = await fetch('https://super.stagingmcstagingface.com/provision', {
     method: 'post',
     headers: {
       Authorization: `Bearer: ${API_KEY}`,
@@ -24,6 +24,8 @@ export default async (req, res) => {
   });
 
   const json = await r.json();
+
+  console.log(json);
 
   res.json(json);
 };

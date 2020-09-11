@@ -66,7 +66,7 @@ export class MapClient implements ObjectClient {
         }
         const putKey = cmd[3];
         const putVal = cmd[4];
-        this.store[putKey] = putVal;
+        this.store[putKey] = unescape(putVal);
         break;
       case 'mdel':
         if (cmd.length !== 4) {

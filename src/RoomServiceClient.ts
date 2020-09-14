@@ -2,7 +2,7 @@ import { WS_URL, DOCS_URL } from './constants';
 import { createRoom } from './RoomClient';
 import { WebSocketLikeConnection, AuthStrategy } from 'types';
 
-interface RoomServiceParameters {
+export interface RoomServiceParameters {
   auth: AuthStrategy;
 }
 

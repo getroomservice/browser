@@ -40,23 +40,33 @@ export class PresenceClient {
     );
     this.cache[key] = val;
 
-    return this.withoutExpired(key);
+    return this.withoutExpiredAndSelf(key);
   }
 
-  private withoutExpired(key: string) {
+  private withoutExpiredAndSelf(key: string) {
     const vals = {} as any;
     for (let actor in this.cache[key]) {
       const obj = this.cache[key][actor];
+
+      // Remove expired
       if (new Date() > obj.expAt) {
         delete this.cache[key][actor];
         continue;
       }
-      vals[actor] = obj.value;
+
+      // Remove self
+      if (this.actor == actor) {
+        delete vals[actor];
+      }
     }
     return vals;
   }
 
+  // Deprecated
   get me() {
+    console.warn(
+      'presence.me() is deprecated and will be removed in a future version!'
+    );
     return this.actor;
   }
 
@@ -91,7 +101,7 @@ export class PresenceClient {
       expAt: new Date(expAt * 1000),
     };
 
-    return this.withoutExpired(key);
+    return this.withoutExpiredAndSelf(key);
   }
 
   update(body: Prop<WebSocketPresenceFwdMessage, 'body'>) {
@@ -108,6 +118,6 @@ export class PresenceClient {
     }
     this.cache[body.key][body.from] = obj;
 
-    return this.withoutExpired(body.key);
+    return this.withoutExpiredAndSelf(body.key);
   }
 }

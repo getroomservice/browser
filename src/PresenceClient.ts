@@ -55,9 +55,9 @@ export class PresenceClient {
       }
 
       // Remove self
-      delete vals[actor];
-
-      vals[actor] = obj.value;
+      if (this.actor == actor) {
+        delete vals[actor];
+      }
     }
     return vals;
   }

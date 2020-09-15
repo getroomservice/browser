@@ -1,7 +1,6 @@
 import { RoomService } from '@roomservice/browser';
 import { useEffect, useState } from 'react';
 import { PresenceClient } from '../../dist/PresenceClient';
-import { PresenceCheckpoint } from '../../dist/types';
 
 function Cursor(props: { fill?: string; x: number; y: number }) {
   return (

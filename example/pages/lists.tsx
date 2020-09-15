@@ -32,7 +32,11 @@ export default function List() {
 
   function onClick() {
     if (!list) return;
-    setList(list.push('new thing'));
+    setList(
+      list.push({
+        object: 'value',
+      })
+    );
   }
 
   return (

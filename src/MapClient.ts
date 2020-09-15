@@ -6,7 +6,7 @@ export class MapClient implements ObjectClient {
   private roomID: string;
   private docID: string;
   private ws: SuperlumeWebSocket;
-  private store: { [key: string]: number | string };
+  private store: { [key: string]: number | string | object };
 
   id: string;
 
@@ -87,7 +87,7 @@ export class MapClient implements ObjectClient {
     return this.store[key];
   }
 
-  set(key: string, value: string | number): MapClient {
+  set(key: string, value: string | number | object): MapClient {
     const escaped = escape(value);
 
     // Local

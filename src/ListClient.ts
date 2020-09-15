@@ -107,7 +107,7 @@ export class ListClient implements ObjectClient {
     return unescape(val);
   }
 
-  set(index: number, val: string | number): ListClient {
+  set(index: number, val: string | number | object): ListClient {
     let itemID = this.itemIDs[index];
     if (!itemID) {
       throw new Error('Unexpected');
@@ -137,7 +137,7 @@ export class ListClient implements ObjectClient {
     return this.clone();
   }
 
-  insertAfter(index: number, val: string | number): ListClient {
+  insertAfter(index: number, val: string | number | object): ListClient {
     let afterID = this.itemIDs[index];
     if (!afterID) {
       throw new RangeError(`List '${this.id}' has no index: '${index}'`);
@@ -154,7 +154,7 @@ export class ListClient implements ObjectClient {
     return this.clone();
   }
 
-  push(val: string | number): ListClient {
+  push(val: string | number | object): ListClient {
     let lastID = this.rt.lastID();
     const escaped = escape(val);
 

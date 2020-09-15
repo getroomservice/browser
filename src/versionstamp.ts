@@ -9,6 +9,9 @@ export function base64toArrayBuffer(vs: string) {
 }
 
 export function isOlderVS(older: string, newer: string): boolean {
+  if (!older) return true;
+  if (!newer) return false;
+
   // These are ALWAYS 10 bytes
   const olderArr = new Uint8Array(base64toArrayBuffer(older).slice(0, 9));
   const newerArr = new Uint8Array(base64toArrayBuffer(newer).slice(0, 9));

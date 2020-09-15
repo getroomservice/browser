@@ -7,6 +7,7 @@ describe('MapClient', () => {
   const ws = new SuperlumeWebSocket({
     onmessage: jest.fn(),
     send,
+    readyState: WebSocket.OPEN,
   });
 
   const map = new MapClient({}, 'room', 'doc', 'map', ws);

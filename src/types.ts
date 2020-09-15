@@ -73,7 +73,8 @@ export interface Document {
   localIndex: number;
 }
 
-type RequireSome<T, K extends keyof T> = Partial<Omit<T, K>> & Required<T>;
+type RequireSome<T, K extends keyof T> = Partial<Omit<T, K>> &
+  Required<Pick<T, K>>;
 
 export type WebSocketLikeConnection = RequireSome<
   WebSocket,

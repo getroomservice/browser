@@ -25,6 +25,7 @@ describe('list clients', () => {
   const ws = new SuperlumeWebSocket({
     onmessage: jest.fn(),
     send,
+    readyState: WebSocket.OPEN,
   });
 
   test("List clients don't include extra quotes", () => {
@@ -51,6 +52,7 @@ describe('list clients', () => {
     const ws = new SuperlumeWebSocket({
       onmessage: jest.fn(),
       send,
+      readyState: WebSocket.OPEN,
     });
 
     const alpha = new ListClient(

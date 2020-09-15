@@ -8,6 +8,7 @@ test('websocket send will send a message of the right format', () => {
   const ws = new SuperlumeWebSocket({
     send,
     onmessage,
+    readyState: WebSocket.OPEN,
   });
 
   // Join

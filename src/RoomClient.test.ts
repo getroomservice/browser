@@ -6,6 +6,7 @@ const cp: DocumentCheckpoint = {
   api_version: 0,
   id: 'doc_123',
   index: 0,
+  vs: 'AAAAOTKy5nUAAA==',
   actors: {},
   lists: {},
   maps: {

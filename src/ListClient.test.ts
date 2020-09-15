@@ -7,6 +7,7 @@ describe('list clients', () => {
     actors: {},
     api_version: 0,
     id: '123',
+    vs: 'AAAAOTKy5nUAAA==',
     index: 0,
     lists: {
       list: {
@@ -82,7 +83,14 @@ describe('list clients', () => {
 
     let alpha = new ListClient(checkpoint, roomID, docID, listID, ws, 'alpha');
     alpha = alpha.push('cats');
-    alpha = alpha.update(['lins', 'doc', 'list', '0:alpha', '0:bob', '"dogs"']);
+    alpha = alpha.dangerouslyUpdateClientDirectly([
+      'lins',
+      'doc',
+      'list',
+      '0:alpha',
+      '0:bob',
+      '"dogs"',
+    ]);
     alpha = alpha.push('birds');
     alpha = alpha.push('lizards');
     alpha = alpha.push('blizzards');
@@ -103,6 +111,7 @@ describe('list clients', () => {
         id: '1f87412b-d411-49ad-a58b-a1464c15959c',
         index: 6,
         api_version: 0,
+        vs: 'AAAAOTKy5nUAAA==',
         actors: {
           '0': 'gst_b355e9c9-f1d3-4233-a6c5-e75e1cd0e52c',
           '1': 'gst_b2b6d556-6d0a-4862-b196-6a6e4aa2ff33',

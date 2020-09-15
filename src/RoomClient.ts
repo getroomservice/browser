@@ -10,7 +10,7 @@ import { ListClient } from './ListClient';
 import { MapClient } from './MapClient';
 import { PresenceClient } from './PresenceClient';
 import invariant from 'tiny-invariant';
-import { isOlderVS } from 'versionstamp';
+import { isOlderVS } from './versionstamp';
 
 const WEBSOCKET_TIMEOUT = 1000 * 2;
 
@@ -163,7 +163,7 @@ export class RoomClient {
         if (body.room !== this.roomID) return;
         if (body.key !== onChangeFnOrString) return;
         if (body.from === this.actor) return;
-        const newObj = obj._dangerouslyUpdateClientDirectly(body);
+        const newObj = obj.dangerouslyUpdateClientDirectly(body);
         invariant(onChangeFn);
         onChangeFn(newObj, body.from);
       });
@@ -191,7 +191,7 @@ export class RoomClient {
       if (objID !== (obj as ObjectClient).id) return;
 
       this.vs = body.vs;
-      const newObj = (obj as ObjectClient)._dangerouslyUpdateClientDirectly(
+      const newObj = (obj as ObjectClient).dangerouslyUpdateClientDirectly(
         body.args
       );
       onChangeFnOrString(newObj, body.from);

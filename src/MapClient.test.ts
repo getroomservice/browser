@@ -37,12 +37,18 @@ describe('MapClient', () => {
   });
 
   test('interprets mput', () => {
-    map.update(['mput', 'doc', 'map', 'cats', 'smiles']);
+    map.dangerouslyUpdateClientDirectly([
+      'mput',
+      'doc',
+      'map',
+      'cats',
+      'smiles',
+    ]);
     expect(map.get('cats')).toEqual('smiles');
   });
 
   test('interprets mdel', () => {
-    map.update(['mdel', 'doc', 'map', 'cats']);
+    map.dangerouslyUpdateClientDirectly(['mdel', 'doc', 'map', 'cats']);
     expect(map.get('cats')).toBeFalsy();
   });
 });

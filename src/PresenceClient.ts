@@ -104,7 +104,7 @@ export class PresenceClient {
     return this.withoutExpiredAndSelf(key);
   }
 
-  _dangerouslyUpdateClientDirectly(
+  dangerouslyUpdateClientDirectly(
     body: Prop<WebSocketPresenceFwdMessage, 'body'>
   ) {
     if (body.room !== this.roomID) return;

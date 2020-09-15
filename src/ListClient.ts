@@ -57,7 +57,7 @@ export class ListClient implements ObjectClient {
     ) as ListClient;
   }
 
-  _dangerouslyUpdateClientDirectly(cmd: string[]): ListClient {
+  dangerouslyUpdateClientDirectly(cmd: string[]): ListClient {
     if (cmd.length < 3) {
       throw new Error('Unexpected command: ' + cmd);
     }

@@ -24,6 +24,7 @@ export interface DocumentCheckpoint {
   id: string;
   index: number;
   api_version: number;
+  vs: string;
   actors: { [key: number]: string };
   lists: { [key: string]: ListCheckpoint };
   maps: { [key: string]: MapCheckpoint };
@@ -91,7 +92,7 @@ export type Prop<V, K extends keyof V> = V[K];
 
 export interface ObjectClient {
   id: string;
-  update(msg: any): ObjectClient;
+  _dangerouslyUpdateClientDirectly(msg: any): ObjectClient;
 }
 
 export interface Resource {

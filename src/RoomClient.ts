@@ -10,6 +10,7 @@ import { ListClient } from './ListClient';
 import { MapClient } from './MapClient';
 import { PresenceClient } from './PresenceClient';
 import invariant from 'tiny-invariant';
+import { isOlderVS } from 'versionstamp';
 
 const WEBSOCKET_TIMEOUT = 1000 * 2;
 
@@ -17,6 +18,7 @@ type Listener = (args: any) => void;
 
 export class RoomClient {
   private ws: SuperlumeWebSocket;
+  private vs: string;
   private token: string;
   private roomID: string;
   private docID: string;
@@ -37,6 +39,7 @@ export class RoomClient {
     this.docID = params.checkpoint.id;
     this.actor = params.actor;
     this.checkpoint = params.checkpoint;
+    this.vs = this.checkpoint.vs;
   }
 
   private async once(msg: string) {
@@ -160,7 +163,7 @@ export class RoomClient {
         if (body.room !== this.roomID) return;
         if (body.key !== onChangeFnOrString) return;
         if (body.from === this.actor) return;
-        const newObj = obj.update(body);
+        const newObj = obj._dangerouslyUpdateClientDirectly(body);
         invariant(onChangeFn);
         onChangeFn(newObj, body.from);
       });
@@ -177,6 +180,8 @@ export class RoomClient {
         console.error('Unexpected command: ', body.args);
         return;
       }
+      // Ignore out of order version stamps
+      if (isOlderVS(body.vs, this.vs)) return;
 
       // Ignore validated commands
       if (body.from === this.actor) return;
@@ -185,7 +190,10 @@ export class RoomClient {
       if (docID !== this.docID) return;
       if (objID !== (obj as ObjectClient).id) return;
 
-      const newObj = (obj as ObjectClient).update(body.args);
+      this.vs = body.vs;
+      const newObj = (obj as ObjectClient)._dangerouslyUpdateClientDirectly(
+        body.args
+      );
       onChangeFnOrString(newObj, body.from);
     });
     return bound;

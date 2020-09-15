@@ -46,7 +46,7 @@ export class MapClient implements ObjectClient {
     ) as MapClient;
   }
 
-  update(cmd: string[]): MapClient {
+  _dangerouslyUpdateClientDirectly(cmd: string[]): MapClient {
     if (cmd.length < 3) {
       throw new Error('Unexpected command: ' + cmd);
     }

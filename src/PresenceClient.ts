@@ -104,7 +104,9 @@ export class PresenceClient {
     return this.withoutExpiredAndSelf(key);
   }
 
-  update(body: Prop<WebSocketPresenceFwdMessage, 'body'>) {
+  _dangerouslyUpdateClientDirectly(
+    body: Prop<WebSocketPresenceFwdMessage, 'body'>
+  ) {
     if (body.room !== this.roomID) return;
     if (body.from === this.actor) return; // ignore validation msgs
 

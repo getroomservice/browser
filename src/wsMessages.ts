@@ -40,6 +40,7 @@ export interface WebSocketDocFwdMessage {
   body: {
     from: string; // a guest id
     room: string;
+    vs: string;
     args: string[];
   };
 }

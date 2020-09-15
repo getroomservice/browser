@@ -73,11 +73,12 @@ export interface Document {
   localIndex: number;
 }
 
-export interface WebSocketLikeConnection {
-  onmessage: (ev: MessageEvent) => any;
-  // onopen: (ev: MessageEvent) => any;
-  send: (data: any) => any;
-}
+type RequireSome<T, K extends keyof T> = Partial<Omit<T, K>> & Required<T>;
+
+export type WebSocketLikeConnection = RequireSome<
+  WebSocket,
+  'send' | 'onmessage'
+>;
 
 export interface DocumentContext {
   lists: { [key: string]: ReverseTree };

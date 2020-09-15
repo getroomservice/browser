@@ -52,6 +52,15 @@ export default class SuperlumeWebSocket {
       body,
     };
 
+    // If the client is connecting, buffer a bit and retry
+    if (this.conn.readyState === this.conn.CONNECTING) {
+      setTimeout(() => {
+        // @ts-ignore
+        this.send(msgType, body);
+      }, 100 + Math.random() * 100);
+      return;
+    }
+
     this.conn.send(JSON.stringify(msg));
   }
 

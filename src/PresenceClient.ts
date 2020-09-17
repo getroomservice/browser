@@ -44,7 +44,7 @@ export class PresenceClient {
   }
 
   private withoutExpiredAndSelf(key: string) {
-    const vals = {} as any;
+    const result = {} as { [key: string]: any };
     for (let actor in this.cache[key]) {
       const obj = this.cache[key][actor];
 
@@ -53,13 +53,10 @@ export class PresenceClient {
         delete this.cache[key][actor];
         continue;
       }
-
-      // Remove self
-      if (this.actor == actor) {
-        delete vals[actor];
-      }
+      result[actor] = obj.value;
     }
-    return vals;
+
+    return result;
   }
 
   // Deprecated

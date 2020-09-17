@@ -7,7 +7,7 @@ function getRandomInt(min, max) {
 }
 
 export default async (req, res) => {
-  const body = JSON.parse(req.body);
+  const body = req.body;
   const API_KEY = 'nEK9OXZsk5G0gdEGieqwy';
   const user = 'some-user-' + getRandomInt(1, 200);
 

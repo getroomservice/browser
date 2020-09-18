@@ -39,6 +39,10 @@ export class ListClient implements ObjectClient {
     const list = checkpoint.lists[listID];
     const ids = list.ids || [];
     for (let i = 0; i < ids.length; i++) {
+      const val = checkpoint.lists[listID].values[i];
+      if (typeof val === 'object' && val['t'] === '') {
+        continue; // skip tombstones
+      }
       this.itemIDs.push(unescapeID(checkpoint, ids[i]));
     }
   }
@@ -51,10 +55,11 @@ export class ListClient implements ObjectClient {
   }
 
   private clone(): ListClient {
-    return Object.assign(
+    const cl = Object.assign(
       Object.create(Object.getPrototypeOf(this)),
       this
     ) as ListClient;
+    return cl;
   }
 
   dangerouslyUpdateClientDirectly(cmd: string[]): ListClient {
@@ -74,6 +79,11 @@ export class ListClient implements ObjectClient {
         const insAfter = cmd[3];
         const insItemID = cmd[4];
         const insValue = cmd[5];
+        this.itemIDs.splice(
+          this.itemIDs.findIndex(f => f === insAfter) + 1,
+          0,
+          insItemID
+        );
         this.rt.insert(insAfter, insValue, insItemID);
         break;
       case 'lput':
@@ -84,6 +94,10 @@ export class ListClient implements ObjectClient {
       case 'ldel':
         const delItemID = cmd[3];
         this.rt.delete(delItemID);
+        this.itemIDs.splice(
+          this.itemIDs.findIndex(f => f === delItemID),
+          1
+        );
         break;
       default:
         throw new Error('Unexpected command keyword: ' + keyword);
@@ -110,7 +124,9 @@ export class ListClient implements ObjectClient {
   set(index: number, val: string | number | object): ListClient {
     let itemID = this.itemIDs[index];
     if (!itemID) {
-      throw new Error('Unexpected');
+      throw new Error(
+        `Index '${index}' doesn't already exist. Try .push() or .insertAfter() instead.`
+      );
     }
     const escaped = escape(val);
 
@@ -125,15 +141,18 @@ export class ListClient implements ObjectClient {
 
   delete(index: number): ListClient {
     let itemID = this.itemIDs[index];
-    if (!itemID) return Object.assign({}, this) as ListClient;
+    if (!itemID) {
+      console.warn('Unknown index: ', index, this.itemIDs);
+      return this.clone() as ListClient;
+    }
 
     // Local
     this.rt.delete(itemID);
+    this.itemIDs.splice(index, 1);
 
     // Remote
     this.sendCmd(['ldel', this.docID, this.id, itemID]);
 
-    Object.assign(Object.create(Object.getPrototypeOf(this)), this);
     return this.clone();
   }
 

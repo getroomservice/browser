@@ -18,6 +18,7 @@ function useList(
       setList(l);
 
       room.subscribe(l, li => {
+        console.log(li);
         setList(li);
       });
     }
@@ -33,6 +34,7 @@ export default function List() {
 
   function onCheckOff(i: number) {
     if (!list) return;
+    console.log('delete', list);
     setList(list.delete(i));
   }
 
@@ -57,8 +59,14 @@ export default function List() {
       />
       {list &&
         list.toArray().map((l, i) => (
-          <p className="todo" onClick={() => onCheckOff(i)}>
+          <p
+            className="todo"
+            key={JSON.stringify(l) + '-' + i}
+            onClick={() => onCheckOff(i)}
+          >
             {l.object || l}
+            {'-'}
+            {i}
           </p>
         ))}
       <style jsx>{`

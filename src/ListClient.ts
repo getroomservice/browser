@@ -168,7 +168,7 @@ export class ListClient implements ObjectClient {
     return this.clone();
   }
 
-  toArray() {
+  toArray(): any[] {
     return this.rt.toArray().map(m => unescape(m));
   }
 }

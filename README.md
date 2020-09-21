@@ -11,5 +11,5 @@ This is the official, javascript SDK.
 ## Install
 
 ```bash
-npm install --save @roomservice/browser
+npm install --save @roomservice/browser@1.0.0-20
 ```

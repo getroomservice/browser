@@ -80,6 +80,10 @@ export class RoomClient {
     await joined;
   }
 
+  get me() {
+    return this.actor;
+  }
+
   async list(name: string): Promise<ListClient> {
     // create a list if it doesn't exist
     if (!this.checkpoint.lists[name]) {
@@ -164,6 +168,7 @@ export class RoomClient {
         if (body.key !== onChangeFnOrString) return;
         if (body.from === this.actor) return;
         const newObj = obj.dangerouslyUpdateClientDirectly(body);
+        if (!newObj) return;
         invariant(onChangeFn);
         onChangeFn(newObj, body.from);
       });

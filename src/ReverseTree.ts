@@ -99,6 +99,7 @@ export default class ReverseTree {
   }
 
   delete(itemID: string) {
+    if (!this.nodes[itemID]) return;
     this.nodes[itemID].value = {
       t: '',
     };

@@ -140,6 +140,9 @@ export class ListClient implements ObjectClient {
   }
 
   delete(index: number): ListClient {
+    if (this.itemIDs.length === 0) {
+      return this.clone();
+    }
     let itemID = this.itemIDs[index];
     if (!itemID) {
       console.warn('Unknown index: ', index, this.itemIDs);

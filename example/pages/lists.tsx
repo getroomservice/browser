@@ -18,7 +18,6 @@ function useList(
       setList(l);
 
       room.subscribe(l, li => {
-        console.log(li);
         setList(li);
       });
     }
@@ -34,7 +33,6 @@ export default function List() {
 
   function onCheckOff(i: number) {
     if (!list) return;
-    console.log('delete', list);
     setList(list.delete(i));
   }
 

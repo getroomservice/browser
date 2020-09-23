@@ -5,6 +5,8 @@ import {
   WebSocketDocCmdMessage,
   WebSocketPresenceCmdMessage,
   WebSocketPresenceFwdMessage,
+  WebSocketLeaveMessage,
+  WebSocketJoinMessage,
 } from './wsMessages';
 import { WebSocketLikeConnection, Prop } from 'types';
 
@@ -36,7 +38,7 @@ export default class SuperlumeWebSocket {
     return `${time}:${this.msgsThisMilisecond}`;
   }
 
-  send(msgType: 'room:join', room: string): void;
+  send(msgType: 'room:join', room: Prop<WebSocketJoinMessage, 'body'>): void;
   send(msgType: 'guest:authenticate', token: string): void;
   send(msgType: 'doc:cmd', body: Prop<WebSocketDocCmdMessage, 'body'>): void;
   send(
@@ -64,6 +66,10 @@ export default class SuperlumeWebSocket {
     this.conn.send(JSON.stringify(msg));
   }
 
+  bind(
+    msgType: 'room:rm_guest',
+    callback: (body: Prop<WebSocketLeaveMessage, 'body'>) => void
+  ): Cb;
   bind(msgType: 'room:joined', callback: (body: string) => void): Cb;
   bind(
     msgType: 'doc:fwd',

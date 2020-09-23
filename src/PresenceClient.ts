@@ -2,7 +2,10 @@ import SuperlumeWebSocket from './ws';
 import { PresenceCheckpoint, Prop } from './types';
 import { fetchPresence } from './remote';
 import { PRESENCE_URL } from './constants';
-import { WebSocketPresenceFwdMessage } from './wsMessages';
+import {
+  WebSocketPresenceFwdMessage,
+  WebSocketLeaveMessage,
+} from './wsMessages';
 import throttle from './throttle';
 
 export class PresenceClient {
@@ -59,6 +62,31 @@ export class PresenceClient {
     return result;
   }
 
+  private withoutActorOrExpired(actor: string) {
+    const result = {} as { [key: string]: any };
+    for (let key in this.cache) {
+      for (let a in this.cache[key]) {
+        const obj = this.cache[key][a];
+        if (!obj) continue;
+
+        // remove this actor
+        if (a === actor && this.cache[key][a]) {
+          delete this.cache[key][a];
+          continue;
+        }
+
+        // Remove expired
+        if (new Date() > obj.expAt) {
+          delete this.cache[key][a];
+          continue;
+        }
+
+        result[a] = obj.value;
+      }
+    }
+    return result;
+  }
+
   // Deprecated
   get me() {
     console.warn(
@@ -102,10 +130,31 @@ export class PresenceClient {
   }
 
   dangerouslyUpdateClientDirectly(
+    type: 'room:rm_guest',
+    body: Prop<WebSocketLeaveMessage, 'body'>
+  ): {
+    [key: string]: any;
+  };
+  dangerouslyUpdateClientDirectly(
+    type: 'presence:fwd',
     body: Prop<WebSocketPresenceFwdMessage, 'body'>
-  ) {
-    if (body.room !== this.roomID) return;
-    if (body.from === this.actor) return; // ignore validation msgs
+  ): {
+    [key: string]: any;
+  };
+  dangerouslyUpdateClientDirectly(
+    type: 'room:rm_guest' | 'presence:fwd',
+    body: any
+  ):
+    | {
+        [key: string]: any;
+      }
+    | false {
+    if (type === 'room:rm_guest') {
+      return this.withoutActorOrExpired(body.guest);
+    }
+
+    if (body.room !== this.roomID) return false;
+    if (body.from === this.actor) return false; // ignore validation msgs
 
     const obj = {
       expAt: new Date(body.expAt * 1000),

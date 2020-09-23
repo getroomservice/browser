@@ -66,18 +66,22 @@ export class PresenceClient {
     const result = {} as { [key: string]: any };
     for (let key in this.cache) {
       for (let a in this.cache[key]) {
+        const obj = this.cache[key][a];
+        if (!obj) continue;
+
         // remove this actor
         if (a === actor && this.cache[key][a]) {
-          delete this.cache[key][a];
-        }
-
-        // Remove expired
-        if (new Date() > this.cache[key][a].expAt) {
           delete this.cache[key][a];
           continue;
         }
 
-        result[a] = this.cache[key][a].value;
+        // Remove expired
+        if (new Date() > obj.expAt) {
+          delete this.cache[key][a];
+          continue;
+        }
+
+        result[a] = obj.value;
       }
     }
     return result;
@@ -146,7 +150,7 @@ export class PresenceClient {
       }
     | false {
     if (type === 'room:rm_guest') {
-      return this.withoutActorOrExpired(body);
+      return this.withoutActorOrExpired(body.guest);
     }
 
     if (body.room !== this.roomID) return false;

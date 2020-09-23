@@ -183,7 +183,7 @@ export class RoomClient {
         );
         if (!newObj) return;
         invariant(onChangeFn);
-        onChangeFn(newObj, body.from);
+        onChangeFn({ ...newObj }, body.from);
       });
       const leaveListener = this.ws.bind('room:rm_guest', body => {
         if (body.room !== this.roomID) return;
@@ -193,7 +193,7 @@ export class RoomClient {
         );
         if (!newObj) return;
         invariant(onChangeFn);
-        onChangeFn(newObj, body.guest);
+        onChangeFn({ ...newObj }, body.guest);
       });
 
       return [

@@ -17,8 +17,22 @@ export async function fetchPresence<T extends any>(
     },
   });
 
-  const doc = await res.json();
-  return doc as PresenceCheckpoint<T>;
+  const doc = (await res.json()) as PresenceCheckpoint<T>;
+
+  // Parse JSON values
+  for (let k in doc) {
+    if (typeof doc[k].value === 'string') {
+      let json;
+      try {
+        json = JSON.parse(doc[k].value as string);
+      } catch (err) {}
+      if (json) {
+        doc[k].value = json;
+      }
+    }
+  }
+
+  return doc;
 }
 
 export async function fetchDocument(

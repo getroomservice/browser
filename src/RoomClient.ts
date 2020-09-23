@@ -4,6 +4,7 @@ import {
   DocumentCheckpoint,
   ObjectClient,
   AuthStrategy,
+  Prop,
 } from './types';
 import { fetchSession, fetchDocument } from './remote';
 import { ListClient } from './ListClient';
@@ -11,10 +12,16 @@ import { MapClient } from './MapClient';
 import { PresenceClient } from './PresenceClient';
 import invariant from 'tiny-invariant';
 import { isOlderVS } from './versionstamp';
+import { WebSocketServerMessage } from 'wsMessages';
 
 const WEBSOCKET_TIMEOUT = 1000 * 2;
 
-type Listener = (args: any) => void;
+type Listener = {
+  event: Prop<WebSocketServerMessage, 'type'>;
+  fn: (args: any) => void;
+};
+
+type ListenerBundle = Array<Listener>;
 
 export class RoomClient {
   private ws: SuperlumeWebSocket;
@@ -137,43 +144,68 @@ export class RoomClient {
     return p;
   }
 
-  subscribe(list: ListClient, onChangeFn: (list: ListClient) => any): Listener;
+  subscribe(
+    list: ListClient,
+    onChangeFn: (list: ListClient) => any
+  ): ListenerBundle;
   subscribe(
     list: ListClient,
     onChangeFn: (list: ListClient, from: string) => any
-  ): Listener;
-  subscribe(map: MapClient, onChangeFn: (map: MapClient) => {}): Listener;
+  ): ListenerBundle;
+  subscribe(map: MapClient, onChangeFn: (map: MapClient) => {}): ListenerBundle;
   subscribe(
     map: MapClient,
     onChangeFn: (map: MapClient, from: string) => any
-  ): Listener;
+  ): ListenerBundle;
   subscribe<T extends any>(
     presence: PresenceClient,
     key: string,
     onChangeFn: (obj: { [key: string]: T }, from: string) => any
-  ): Listener;
+  ): ListenerBundle;
   subscribe<T extends any>(
     obj: ObjectClient | PresenceClient,
     onChangeFnOrString: Function | string,
     onChangeFn?: (obj: { [key: string]: T }, from: string) => any
-  ): Listener {
+  ): ListenerBundle {
     // Presence handler
     if (typeof onChangeFnOrString === 'string') {
       invariant(
         obj,
         'subscribe() expects the first argument to not be undefined.'
       );
-      const bound = this.ws.bind('presence:fwd', body => {
+      const fwdListener = this.ws.bind('presence:fwd', body => {
         if (body.room !== this.roomID) return;
         if (body.key !== onChangeFnOrString) return;
         if (body.from === this.actor) return;
-        const newObj = obj.dangerouslyUpdateClientDirectly(body);
+        const newObj = obj.dangerouslyUpdateClientDirectly(
+          'presence:fwd',
+          body
+        );
         if (!newObj) return;
         invariant(onChangeFn);
         onChangeFn(newObj, body.from);
       });
+      const leaveListener = this.ws.bind('room:rm_guest', body => {
+        if (body.room !== this.roomID) return;
+        const newObj = obj.dangerouslyUpdateClientDirectly(
+          'room:rm_guest',
+          body
+        );
+        if (!newObj) return;
+        invariant(onChangeFn);
+        onChangeFn(newObj, body.guest);
+      });
 
-      return bound;
+      return [
+        {
+          event: 'presence:fwd',
+          fn: fwdListener,
+        },
+        {
+          event: 'room:rm_guest',
+          fn: leaveListener,
+        },
+      ];
     }
 
     // Map and list handler
@@ -201,11 +233,18 @@ export class RoomClient {
       );
       onChangeFnOrString(newObj, body.from);
     });
-    return bound;
+    return [
+      {
+        event: 'doc:fwd',
+        fn: bound,
+      },
+    ];
   }
 
-  unsubscribe(listener: Listener) {
-    this.ws.unbind('doc:fwd', listener);
+  unsubscribe(listeners: ListenerBundle) {
+    for (let l of listeners) {
+      this.ws.unbind(l.event, l.fn);
+    }
   }
 }
 

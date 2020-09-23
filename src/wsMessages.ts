@@ -57,11 +57,20 @@ export interface WebSocketPresenceCmdMessage {
   ts: string;
 }
 
+export interface WebSocketLeaveMessage {
+  ver: number;
+  type: 'room:rm_guest';
+  body: {
+    guest: string; // a guest ref
+    room: string; // a room id
+  };
+}
+
 export interface WebSocketPresenceFwdMessage {
   ver: number;
   type: 'presence:fwd';
   body: {
-    from: string; // a guest id
+    from: string; // a guest ref
     room: string;
     key: string;
     value: string;
@@ -84,7 +93,8 @@ export type WebSocketServerMessage =
   | WebSocketDocFwdMessage
   | WebSocketPresenceFwdMessage
   | WebSocketJoinedMessage
-  | WebSocketErrorMessage;
+  | WebSocketErrorMessage
+  | WebSocketLeaveMessage;
 
 // Messages coming from the client
 export type WebSocketClientMessage =

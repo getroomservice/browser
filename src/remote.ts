@@ -114,14 +114,18 @@ export async function fetchSession(
   });
 
   if (res.status === 401) {
-    // Todo, make a better path for handling this
-    throw new Error('AuthURL returned unauthorized');
+    throw new Error('The Auth Webhook returned unauthorized.');
+  }
+  if (res.status !== 200) {
+    throw new Error('The Auth Webhook returned a status code other than 200.');
   }
 
   const { token, user, resources } = (await res.json()) as ServerSession;
 
   if (!resources || !token || !user) {
-    throw new Error('Invalid response from the AuthURL: ' + url);
+    throw new Error(
+      'The Auth Webhook has an incorrectly formatted JSON response.'
+    );
   }
 
   const docID = resources.find(r => r.object === 'document')!.id;

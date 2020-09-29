@@ -3,5 +3,9 @@ export function escape(value: number | string | object): string {
 }
 
 export function unescape(value: string): string | number | object {
-  return JSON.parse(value);
+  try {
+    return JSON.parse(value);
+  } catch (error) {
+    return value;
+  }
 }

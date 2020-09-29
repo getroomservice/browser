@@ -1,6 +1,6 @@
 import { ObjectClient, MapCheckpoint } from './types';
 import SuperlumeWebSocket from './ws';
-import { escape } from './escape';
+import { escape, unescape } from './escape';
 
 export class MapClient implements ObjectClient {
   private roomID: string;

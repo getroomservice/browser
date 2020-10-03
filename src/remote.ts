@@ -120,9 +120,16 @@ export async function fetchSession(
     throw new Error('The Auth Webhook returned a status code other than 200.');
   }
 
-  const { token, user, resources } = (await res.json()) as ServerSession;
+  const json = (await res.json()) as ServerSession;
+  const { resources, token, user } = json;
 
   if (!resources || !token || !user) {
+    if ((json as any).body === 'Unauthorized') {
+      throw new Error(
+        'The Auth Webhook unexpectedly return unauthorized. You may be using an invalid API key.'
+      );
+    }
+
     throw new Error(
       'The Auth Webhook has an incorrectly formatted JSON response.'
     );

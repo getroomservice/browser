@@ -33,6 +33,10 @@ export class RoomClient {
   private checkpoint: DocumentCheckpoint;
   private errorListener: any;
 
+  private presenceClient?: PresenceClient;
+  private listClients: { [key: string]: ListClient } = {};
+  private mapClients: { [key: string]: MapClient } = {};
+
   constructor(params: {
     conn: WebSocketLikeConnection;
     actor: string;
@@ -92,6 +96,10 @@ export class RoomClient {
   }
 
   async list(name: string): Promise<ListClient> {
+    if (this.listClients[name]) {
+      return this.listClients[name];
+    }
+
     // create a list if it doesn't exist
     if (!this.checkpoint.lists[name]) {
       this.ws.send('doc:cmd', {
@@ -115,11 +123,16 @@ export class RoomClient {
       this.ws,
       this.actor
     );
+    this.listClients[name] = l;
 
     return l;
   }
 
   async map(name: string): Promise<MapClient> {
+    if (this.mapClients[name]) {
+      return this.mapClients[name];
+    }
+
     // Create this map if it doesn't exist
     if (!this.checkpoint.maps[name]) {
       this.ws.send('doc:cmd', {
@@ -135,13 +148,18 @@ export class RoomClient {
       name,
       this.ws
     );
+    this.mapClients[name] = m;
 
     return m;
   }
 
   async presence(): Promise<PresenceClient> {
+    if (this.presenceClient) {
+      return this.presenceClient;
+    }
     const p = new PresenceClient(this.roomID, this.ws, this.actor, this.token);
-    return p;
+    this.presenceClient = p;
+    return this.presenceClient;
   }
 
   subscribe(

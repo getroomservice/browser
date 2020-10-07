@@ -96,7 +96,7 @@ export class RoomClient {
     return this.actor;
   }
 
-  async list(name: string): Promise<ListClient> {
+  list(name: string): ListClient {
     if (this.listClients[name]) {
       return this.listClients[name];
     }
@@ -129,7 +129,7 @@ export class RoomClient {
     return l;
   }
 
-  async map(name: string): Promise<MapClient> {
+  map(name: string): MapClient {
     if (this.mapClients[name]) {
       return this.mapClients[name];
     }
@@ -154,7 +154,7 @@ export class RoomClient {
     return m;
   }
 
-  async presence(): Promise<PresenceClient> {
+  presence(): PresenceClient {
     if (this.presenceClient) {
       return this.presenceClient;
     }

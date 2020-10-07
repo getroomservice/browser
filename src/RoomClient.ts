@@ -51,6 +51,7 @@ export class RoomClient {
     this.actor = params.actor;
     this.checkpoint = params.checkpoint;
     this.vs = this.checkpoint.vs;
+    this.presenceClient = undefined;
   }
 
   private async once(msg: string) {
@@ -158,7 +159,13 @@ export class RoomClient {
       return this.presenceClient;
     }
     const p = new PresenceClient(this.roomID, this.ws, this.actor, this.token);
-    this.presenceClient = p;
+    try {
+      this.presenceClient = p;
+    } catch (err) {
+      throw new Error(
+        `Don't Freeze State. See more: https://err.sh/getroomservice/browser/dont-freeze`
+      );
+    }
     return this.presenceClient;
   }
 

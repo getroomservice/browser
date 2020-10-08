@@ -83,6 +83,10 @@ export class MapClient implements ObjectClient {
     return this.clone();
   }
 
+  get keys() {
+    return Object.keys(this.store);
+  }
+
   get(key: string) {
     return this.store[key];
   }

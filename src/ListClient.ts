@@ -5,8 +5,7 @@ import { unescape, escape } from './escape';
 import { unescapeID } from './util';
 import invariant from 'tiny-invariant';
 
-export class ListClient<T extends string | number | object>
-  implements ObjectClient {
+export class ListClient<T extends any> implements ObjectClient {
   private roomID: string;
   private docID: string;
   private ws: SuperlumeWebSocket;

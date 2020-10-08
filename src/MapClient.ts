@@ -2,8 +2,7 @@ import { ObjectClient, MapCheckpoint } from './types';
 import SuperlumeWebSocket from './ws';
 import { escape, unescape } from './escape';
 
-export class MapClient<T extends string | number | object>
-  implements ObjectClient {
+export class MapClient<T extends any> implements ObjectClient {
   private roomID: string;
   private docID: string;
   private ws: SuperlumeWebSocket;

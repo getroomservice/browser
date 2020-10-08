@@ -34,8 +34,8 @@ export class RoomClient {
   private errorListener: any;
 
   private presenceClient?: PresenceClient;
-  private listClients: { [key: string]: ListClient } = {};
-  private mapClients: { [key: string]: MapClient } = {};
+  private listClients: { [key: string]: ListClient<any> } = {};
+  private mapClients: { [key: string]: MapClient<any> } = {};
 
   constructor(params: {
     conn: WebSocketLikeConnection;
@@ -96,7 +96,7 @@ export class RoomClient {
     return this.actor;
   }
 
-  list(name: string): ListClient {
+  list<T extends any>(name: string): ListClient<T> {
     if (this.listClients[name]) {
       return this.listClients[name];
     }
@@ -116,7 +116,7 @@ export class RoomClient {
       };
     }
 
-    const l = new ListClient(
+    const l = new ListClient<T>(
       this.checkpoint,
       this.roomID,
       this.docID,
@@ -129,7 +129,7 @@ export class RoomClient {
     return l;
   }
 
-  map(name: string): MapClient {
+  map<T extends any>(name: string): MapClient<T> {
     if (this.mapClients[name]) {
       return this.mapClients[name];
     }
@@ -142,7 +142,7 @@ export class RoomClient {
       });
     }
 
-    const m = new MapClient(
+    const m = new MapClient<T>(
       this.checkpoint.maps[name] || {},
       this.roomID,
       this.docID,
@@ -169,18 +169,21 @@ export class RoomClient {
     return this.presenceClient;
   }
 
-  subscribe(
-    list: ListClient,
-    onChangeFn: (list: ListClient) => any
+  subscribe<T>(
+    list: ListClient<T>,
+    onChangeFn: (list: ListClient<T>) => any
   ): ListenerBundle;
-  subscribe(
-    list: ListClient,
-    onChangeFn: (list: ListClient, from: string) => any
+  subscribe<T>(
+    list: ListClient<T>,
+    onChangeFn: (list: ListClient<T>, from: string) => any
   ): ListenerBundle;
-  subscribe(map: MapClient, onChangeFn: (map: MapClient) => {}): ListenerBundle;
-  subscribe(
-    map: MapClient,
-    onChangeFn: (map: MapClient, from: string) => any
+  subscribe<T>(
+    map: MapClient<T>,
+    onChangeFn: (map: MapClient<T>) => {}
+  ): ListenerBundle;
+  subscribe<T>(
+    map: MapClient<T>,
+    onChangeFn: (map: MapClient<T>, from: string) => any
   ): ListenerBundle;
   subscribe<T extends any>(
     presence: PresenceClient,

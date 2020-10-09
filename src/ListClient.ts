@@ -128,7 +128,7 @@ export class ListClient<T extends any> implements ObjectClient {
         `Index '${index}' doesn't already exist. Try .push() or .insertAfter() instead.`
       );
     }
-    const escaped = escape(val);
+    const escaped = escape(val as any);
 
     // Local
     this.rt.put(itemID, escaped);
@@ -164,7 +164,7 @@ export class ListClient<T extends any> implements ObjectClient {
     if (!afterID) {
       throw new RangeError(`List '${this.id}' has no index: '${index}'`);
     }
-    const escaped = escape(val);
+    const escaped = escape(val as any);
 
     // Local
     const itemID = this.rt.insert(afterID, escaped);
@@ -178,7 +178,7 @@ export class ListClient<T extends any> implements ObjectClient {
 
   push(val: T): ListClient<T> {
     let lastID = this.rt.lastID();
-    const escaped = escape(val);
+    const escaped = escape(val as any);
 
     // Local
     const itemID = this.rt.insert(lastID, escaped);

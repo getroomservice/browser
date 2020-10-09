@@ -1,12 +1,14 @@
-import { ObjectClient, MapCheckpoint } from './types';
+import { ObjectClient, MapCheckpoint, Prop } from './types';
 import SuperlumeWebSocket from './ws';
 import { escape, unescape } from './escape';
+import throttle from './throttle';
 
 export class MapClient<T extends any> implements ObjectClient {
   private roomID: string;
   private docID: string;
   private ws: SuperlumeWebSocket;
   private store: { [key: string]: number | string | object | T };
+  private send: Prop<SuperlumeWebSocket, 'send'>;
 
   id: string;
 
@@ -30,10 +32,12 @@ export class MapClient<T extends any> implements ObjectClient {
         this.store[k] = unescape(val);
       }
     }
+
+    this.send = throttle(this.ws.send.bind(this.ws), 50);
   }
 
   private sendCmd(cmd: string[]) {
-    this.ws.send('doc:cmd', {
+    this.send('doc:cmd', {
       room: this.roomID,
       args: cmd,
     });

@@ -1,15 +1,17 @@
 import SuperlumeWebSocket from './ws';
-import { Tombstone, ObjectClient, DocumentCheckpoint } from './types';
+import { Tombstone, ObjectClient, DocumentCheckpoint, Prop } from './types';
 import ReverseTree from './ReverseTree';
 import { unescape, escape } from './escape';
 import { unescapeID } from './util';
 import invariant from 'tiny-invariant';
+import throttle from './throttle';
 
 export class ListClient<T extends any> implements ObjectClient {
   private roomID: string;
   private docID: string;
   private ws: SuperlumeWebSocket;
   private rt: ReverseTree;
+  private send: Prop<SuperlumeWebSocket, 'send'>;
 
   // Map indexes to item ids
   private itemIDs: Array<string> = [];
@@ -29,6 +31,7 @@ export class ListClient<T extends any> implements ObjectClient {
     this.id = listID;
     this.ws = ws;
     this.rt = new ReverseTree(actor);
+    this.send = throttle(this.ws.send.bind(this.ws), 50);
 
     invariant(
       checkpoint.lists[listID],
@@ -48,7 +51,7 @@ export class ListClient<T extends any> implements ObjectClient {
   }
 
   private sendCmd(cmd: string[]) {
-    this.ws.send('doc:cmd', {
+    this.send('doc:cmd', {
       room: this.roomID,
       args: cmd,
     });

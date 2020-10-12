@@ -1,6 +1,5 @@
-import { RoomService } from '@roomservice/browser';
+import { RoomService, PresenceClient } from '@roomservice/browser';
 import { useEffect, useState } from 'react';
-import { PresenceClient } from '../../dist/PresenceClient';
 
 function Cursor(props: { fill?: string; x: number; y: number }) {
   return (

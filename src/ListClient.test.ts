@@ -1,4 +1,4 @@
-import { ListClient } from './ListClient';
+import { InnerListClient } from './InnerListClient';
 import { DocumentCheckpoint } from './types';
 import SuperlumeWebSocket from './ws';
 
@@ -29,7 +29,7 @@ describe('list clients', () => {
   });
 
   test("List clients don't include extra quotes", () => {
-    const alpha = new ListClient(
+    const alpha = new InnerListClient(
       checkpoint,
       roomID,
       docID,
@@ -55,7 +55,7 @@ describe('list clients', () => {
       readyState: WebSocket.OPEN,
     });
 
-    const alpha = new ListClient(
+    const alpha = new InnerListClient(
       checkpoint,
       roomID,
       docID,
@@ -83,7 +83,14 @@ describe('list clients', () => {
       send,
     });
 
-    let alpha = new ListClient(checkpoint, roomID, docID, listID, ws, 'alpha');
+    let alpha = new InnerListClient(
+      checkpoint,
+      roomID,
+      docID,
+      listID,
+      ws,
+      'alpha'
+    );
     alpha = alpha.push('cats');
     alpha = alpha.dangerouslyUpdateClientDirectly([
       'lins',
@@ -135,7 +142,7 @@ describe('list clients', () => {
       send,
     });
 
-    let alpha = new ListClient(
+    let alpha = new InnerListClient(
       fixture.body,
       roomID,
       fixture.body.id,

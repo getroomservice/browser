@@ -8,7 +8,7 @@ import {
 } from './wsMessages';
 import throttle from './throttle';
 
-export class PresenceClient {
+export class InnerPresenceClient {
   private roomID: string;
   private ws: SuperlumeWebSocket;
   private actor: string;

@@ -2,7 +2,7 @@ import { ObjectClient, MapCheckpoint } from './types';
 import SuperlumeWebSocket from './ws';
 import { escape, unescape } from './escape';
 
-export class MapClient<T extends any> implements ObjectClient {
+export class InnerMapClient<T extends any> implements ObjectClient {
   private roomID: string;
   private docID: string;
   private ws: SuperlumeWebSocket;
@@ -39,14 +39,14 @@ export class MapClient<T extends any> implements ObjectClient {
     });
   }
 
-  private clone(): MapClient<T> {
+  private clone(): InnerMapClient<T> {
     return Object.assign(
       Object.create(Object.getPrototypeOf(this)),
       this
-    ) as MapClient<T>;
+    ) as InnerMapClient<T>;
   }
 
-  dangerouslyUpdateClientDirectly(cmd: string[]): MapClient<T> {
+  dangerouslyUpdateClientDirectly(cmd: string[]): InnerMapClient<T> {
     if (cmd.length < 3) {
       throw new Error('Unexpected command: ' + cmd);
     }
@@ -91,7 +91,7 @@ export class MapClient<T extends any> implements ObjectClient {
     return this.store[key] as T;
   }
 
-  set(key: string, value: T): MapClient<T> {
+  set(key: string, value: T): InnerMapClient<T> {
     const escaped = escape(value as any);
 
     // Local
@@ -103,7 +103,7 @@ export class MapClient<T extends any> implements ObjectClient {
     return this.clone();
   }
 
-  delete(key: string): MapClient<T> {
+  delete(key: string): InnerMapClient<T> {
     // local
     delete this.store[key];
 

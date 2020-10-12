@@ -1,9 +1,11 @@
 import { RoomService } from './RoomServiceClient';
-import { RoomClient } from './RoomClient';
-import { ListClient } from './ListClient';
-import { PresenceClient } from './PresenceClient';
-import { MapClient } from './MapClient';
+import {
+  RoomClient,
+  MapClient,
+  ListClient,
+  PresenceClient,
+} from './RoomClient';
 
-export { RoomService, RoomClient, ListClient, PresenceClient, MapClient };
+export { RoomService, RoomClient, MapClient, ListClient, PresenceClient };
 
 export default RoomService;

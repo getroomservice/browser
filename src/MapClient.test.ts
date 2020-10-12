@@ -1,8 +1,8 @@
-import { MapClient } from './MapClient';
+import { InnerMapClient } from './InnerMapClient';
 import SuperlumeWebSocket from './ws';
 import { WebSocketDocCmdMessage } from './wsMessages';
 
-describe('MapClient', () => {
+describe('InnerMapClient', () => {
   const send = jest.fn();
   const ws = new SuperlumeWebSocket({
     onmessage: jest.fn(),
@@ -10,7 +10,7 @@ describe('MapClient', () => {
     readyState: WebSocket.OPEN,
   });
 
-  const map = new MapClient({}, 'room', 'doc', 'map', ws);
+  const map = new InnerMapClient({}, 'room', 'doc', 'map', ws);
 
   test('has the correct id', () => {
     expect(map.id).toEqual('map');

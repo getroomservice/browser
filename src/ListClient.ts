@@ -5,7 +5,7 @@ import { unescape, escape } from './escape';
 import { unescapeID } from './util';
 import invariant from 'tiny-invariant';
 
-export class ListClient<T extends any> implements ObjectClient {
+export class InnerListClient<T extends any> implements ObjectClient {
   private roomID: string;
   private docID: string;
   private ws: SuperlumeWebSocket;
@@ -54,15 +54,15 @@ export class ListClient<T extends any> implements ObjectClient {
     });
   }
 
-  private clone(): ListClient<T> {
+  private clone(): InnerListClient<T> {
     const cl = Object.assign(
       Object.create(Object.getPrototypeOf(this)),
       this
-    ) as ListClient<T>;
+    ) as InnerListClient<T>;
     return cl;
   }
 
-  dangerouslyUpdateClientDirectly(cmd: string[]): ListClient<T> {
+  dangerouslyUpdateClientDirectly(cmd: string[]): InnerListClient<T> {
     if (cmd.length < 3) {
       throw new Error('Unexpected command: ' + cmd);
     }
@@ -121,7 +121,7 @@ export class ListClient<T extends any> implements ObjectClient {
     return unescape(val) as T;
   }
 
-  set(index: number, val: T): ListClient<T> {
+  set(index: number, val: T): InnerListClient<T> {
     let itemID = this.itemIDs[index];
     if (!itemID) {
       throw new Error(
@@ -139,14 +139,14 @@ export class ListClient<T extends any> implements ObjectClient {
     return this.clone();
   }
 
-  delete(index: number): ListClient<T> {
+  delete(index: number): InnerListClient<T> {
     if (this.itemIDs.length === 0) {
       return this.clone();
     }
     let itemID = this.itemIDs[index];
     if (!itemID) {
       console.warn('Unknown index: ', index, this.itemIDs);
-      return this.clone() as ListClient<T>;
+      return this.clone() as InnerListClient<T>;
     }
 
     // Local
@@ -159,7 +159,7 @@ export class ListClient<T extends any> implements ObjectClient {
     return this.clone();
   }
 
-  insertAfter(index: number, val: T): ListClient<T> {
+  insertAfter(index: number, val: T): InnerListClient<T> {
     let afterID = this.itemIDs[index];
     if (!afterID) {
       throw new RangeError(`List '${this.id}' has no index: '${index}'`);
@@ -176,7 +176,7 @@ export class ListClient<T extends any> implements ObjectClient {
     return this.clone();
   }
 
-  push(val: T): ListClient<T> {
+  push(val: T): InnerListClient<T> {
     let lastID = this.rt.lastID();
     const escaped = escape(val as any);
 

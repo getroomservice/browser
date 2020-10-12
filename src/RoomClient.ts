@@ -7,9 +7,9 @@ import {
   Prop,
 } from './types';
 import { fetchSession, fetchDocument } from './remote';
-import { ListClient } from './ListClient';
-import { MapClient } from './MapClient';
-import { PresenceClient } from './PresenceClient';
+import { InnerListClient } from './ListClient';
+import { InnerMapClient } from './MapClient';
+import { InnerPresenceClient } from './PresenceClient';
 import invariant from 'tiny-invariant';
 import { isOlderVS } from './versionstamp';
 import { WebSocketServerMessage } from 'wsMessages';
@@ -23,6 +23,20 @@ type Listener = {
 
 type ListenerBundle = Array<Listener>;
 
+type Omit<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>>;
+export type MapClient<T> = Omit<
+  InnerMapClient<T>,
+  'dangerouslyUpdateClientDirectly'
+>;
+export type ListClient<T> = Omit<
+  InnerListClient<T>,
+  'dangerouslyUpdateClientDirectly'
+>;
+export type PresenceClient = Omit<
+  InnerPresenceClient,
+  'dangerouslyUpdateClientDirectly'
+>;
+
 export class RoomClient {
   private ws: SuperlumeWebSocket;
   private vs: string;
@@ -33,9 +47,9 @@ export class RoomClient {
   private checkpoint: DocumentCheckpoint;
   private errorListener: any;
 
-  private presenceClient?: PresenceClient;
-  private listClients: { [key: string]: ListClient<any> } = {};
-  private mapClients: { [key: string]: MapClient<any> } = {};
+  private InnerPresenceClient?: InnerPresenceClient;
+  private listClients: { [key: string]: InnerListClient<any> } = {};
+  private mapClients: { [key: string]: InnerMapClient<any> } = {};
 
   constructor(params: {
     conn: WebSocketLikeConnection;
@@ -51,7 +65,7 @@ export class RoomClient {
     this.actor = params.actor;
     this.checkpoint = params.checkpoint;
     this.vs = this.checkpoint.vs;
-    this.presenceClient = undefined;
+    this.InnerPresenceClient = undefined;
   }
 
   private async once(msg: string) {
@@ -96,7 +110,7 @@ export class RoomClient {
     return this.actor;
   }
 
-  list<T extends any>(name: string): ListClient<T> {
+  list<T extends any>(name: string): InnerListClient<T> {
     if (this.listClients[name]) {
       return this.listClients[name];
     }
@@ -116,7 +130,7 @@ export class RoomClient {
       };
     }
 
-    const l = new ListClient<T>(
+    const l = new InnerListClient<T>(
       this.checkpoint,
       this.roomID,
       this.docID,
@@ -129,7 +143,7 @@ export class RoomClient {
     return l;
   }
 
-  map<T extends any>(name: string): MapClient<T> {
+  map<T extends any>(name: string): InnerMapClient<T> {
     if (this.mapClients[name]) {
       return this.mapClients[name];
     }
@@ -142,7 +156,7 @@ export class RoomClient {
       });
     }
 
-    const m = new MapClient<T>(
+    const m = new InnerMapClient<T>(
       this.checkpoint.maps[name] || {},
       this.roomID,
       this.docID,
@@ -154,19 +168,24 @@ export class RoomClient {
     return m;
   }
 
-  presence(): PresenceClient {
-    if (this.presenceClient) {
-      return this.presenceClient;
+  presence(): InnerPresenceClient {
+    if (this.InnerPresenceClient) {
+      return this.InnerPresenceClient;
     }
-    const p = new PresenceClient(this.roomID, this.ws, this.actor, this.token);
+    const p = new InnerPresenceClient(
+      this.roomID,
+      this.ws,
+      this.actor,
+      this.token
+    );
     try {
-      this.presenceClient = p;
+      this.InnerPresenceClient = p;
     } catch (err) {
       throw new Error(
         `Don't Freeze State. See more: https://err.sh/getroomservice/browser/dont-freeze`
       );
     }
-    return this.presenceClient;
+    return this.InnerPresenceClient;
   }
 
   subscribe<T>(
@@ -191,7 +210,7 @@ export class RoomClient {
     onChangeFn: (obj: { [key: string]: T }, from: string) => any
   ): ListenerBundle;
   subscribe<T extends any>(
-    obj: ObjectClient | PresenceClient,
+    obj: any,
     onChangeFnOrString: Function | string,
     onChangeFn?: (obj: { [key: string]: T }, from: string) => any
   ): ListenerBundle {
@@ -205,7 +224,8 @@ export class RoomClient {
         if (body.room !== this.roomID) return;
         if (body.key !== onChangeFnOrString) return;
         if (body.from === this.actor) return;
-        const newObj = obj.dangerouslyUpdateClientDirectly(
+
+        const newObj = (obj as InnerPresenceClient).dangerouslyUpdateClientDirectly(
           'presence:fwd',
           body
         );
@@ -215,7 +235,7 @@ export class RoomClient {
       });
       const leaveListener = this.ws.bind('room:rm_guest', body => {
         if (body.room !== this.roomID) return;
-        const newObj = obj.dangerouslyUpdateClientDirectly(
+        const newObj = (obj as InnerPresenceClient).dangerouslyUpdateClientDirectly(
           'room:rm_guest',
           body
         );

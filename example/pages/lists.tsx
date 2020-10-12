@@ -1,12 +1,11 @@
-import { RoomService } from '@roomservice/browser';
+import { RoomService, ListClient } from '@roomservice/browser';
 import { useEffect, useState } from 'react';
-import { ListClient } from '../../dist/ListClient';
 
 function useList(
   roomName: string,
   listName: string
-): [ListClient, (l: ListClient) => void] {
-  const [list, setList] = useState<ListClient>();
+): [ListClient<any>, (l: ListClient<any>) => void] {
+  const [list, setList] = useState<ListClient<any>>();
 
   useEffect(() => {
     async function load() {

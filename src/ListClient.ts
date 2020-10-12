@@ -5,7 +5,7 @@ import { unescape, escape } from './escape';
 import { unescapeID } from './util';
 import invariant from 'tiny-invariant';
 
-export class ListClient implements ObjectClient {
+export class ListClient<T extends any> implements ObjectClient {
   private roomID: string;
   private docID: string;
   private ws: SuperlumeWebSocket;
@@ -54,15 +54,15 @@ export class ListClient implements ObjectClient {
     });
   }
 
-  private clone(): ListClient {
+  private clone(): ListClient<T> {
     const cl = Object.assign(
       Object.create(Object.getPrototypeOf(this)),
       this
-    ) as ListClient;
+    ) as ListClient<T>;
     return cl;
   }
 
-  dangerouslyUpdateClientDirectly(cmd: string[]): ListClient {
+  dangerouslyUpdateClientDirectly(cmd: string[]): ListClient<T> {
     if (cmd.length < 3) {
       throw new Error('Unexpected command: ' + cmd);
     }
@@ -105,7 +105,7 @@ export class ListClient implements ObjectClient {
     return this.clone();
   }
 
-  get(index: number) {
+  get(index: number): T | undefined {
     let itemID = this.itemIDs[index];
     if (!itemID) return undefined;
 
@@ -118,17 +118,17 @@ export class ListClient implements ObjectClient {
       throw new Error('Unimplemented references');
     }
 
-    return unescape(val);
+    return unescape(val) as T;
   }
 
-  set(index: number, val: string | number | object): ListClient {
+  set(index: number, val: T): ListClient<T> {
     let itemID = this.itemIDs[index];
     if (!itemID) {
       throw new Error(
         `Index '${index}' doesn't already exist. Try .push() or .insertAfter() instead.`
       );
     }
-    const escaped = escape(val);
+    const escaped = escape(val as any);
 
     // Local
     this.rt.put(itemID, escaped);
@@ -139,14 +139,14 @@ export class ListClient implements ObjectClient {
     return this.clone();
   }
 
-  delete(index: number): ListClient {
+  delete(index: number): ListClient<T> {
     if (this.itemIDs.length === 0) {
       return this.clone();
     }
     let itemID = this.itemIDs[index];
     if (!itemID) {
       console.warn('Unknown index: ', index, this.itemIDs);
-      return this.clone() as ListClient;
+      return this.clone() as ListClient<T>;
     }
 
     // Local
@@ -159,12 +159,12 @@ export class ListClient implements ObjectClient {
     return this.clone();
   }
 
-  insertAfter(index: number, val: string | number | object): ListClient {
+  insertAfter(index: number, val: T): ListClient<T> {
     let afterID = this.itemIDs[index];
     if (!afterID) {
       throw new RangeError(`List '${this.id}' has no index: '${index}'`);
     }
-    const escaped = escape(val);
+    const escaped = escape(val as any);
 
     // Local
     const itemID = this.rt.insert(afterID, escaped);
@@ -176,9 +176,9 @@ export class ListClient implements ObjectClient {
     return this.clone();
   }
 
-  push(val: string | number | object): ListClient {
+  push(val: T): ListClient<T> {
     let lastID = this.rt.lastID();
-    const escaped = escape(val);
+    const escaped = escape(val as any);
 
     // Local
     const itemID = this.rt.insert(lastID, escaped);
@@ -190,7 +190,7 @@ export class ListClient implements ObjectClient {
     return this.clone();
   }
 
-  toArray(): any[] {
-    return this.rt.toArray().map(m => unescape(m));
+  toArray(): T[] {
+    return this.rt.toArray().map(m => unescape(m)) as any[];
   }
 }

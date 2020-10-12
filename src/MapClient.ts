@@ -2,11 +2,11 @@ import { ObjectClient, MapCheckpoint } from './types';
 import SuperlumeWebSocket from './ws';
 import { escape, unescape } from './escape';
 
-export class MapClient implements ObjectClient {
+export class MapClient<T extends any> implements ObjectClient {
   private roomID: string;
   private docID: string;
   private ws: SuperlumeWebSocket;
-  private store: { [key: string]: number | string | object };
+  private store: { [key: string]: number | string | object | T };
 
   id: string;
 
@@ -39,14 +39,14 @@ export class MapClient implements ObjectClient {
     });
   }
 
-  private clone(): MapClient {
+  private clone(): MapClient<T> {
     return Object.assign(
       Object.create(Object.getPrototypeOf(this)),
       this
-    ) as MapClient;
+    ) as MapClient<T>;
   }
 
-  dangerouslyUpdateClientDirectly(cmd: string[]): MapClient {
+  dangerouslyUpdateClientDirectly(cmd: string[]): MapClient<T> {
     if (cmd.length < 3) {
       throw new Error('Unexpected command: ' + cmd);
     }
@@ -83,12 +83,16 @@ export class MapClient implements ObjectClient {
     return this.clone();
   }
 
-  get(key: string) {
-    return this.store[key];
+  get keys() {
+    return Object.keys(this.store);
   }
 
-  set(key: string, value: string | number | object): MapClient {
-    const escaped = escape(value);
+  get(key: string): T {
+    return this.store[key] as T;
+  }
+
+  set(key: string, value: T): MapClient<T> {
+    const escaped = escape(value as any);
 
     // Local
     this.store[key] = value;
@@ -99,7 +103,7 @@ export class MapClient implements ObjectClient {
     return this.clone();
   }
 
-  delete(key: string): MapClient {
+  delete(key: string): MapClient<T> {
     // local
     delete this.store[key];
 

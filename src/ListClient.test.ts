@@ -1,4 +1,4 @@
-import { InnerListClient } from './InnerListClient';
+import { InnerListClient } from './ListClient';
 import { DocumentCheckpoint } from './types';
 import SuperlumeWebSocket from './ws';
 

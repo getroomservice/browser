@@ -1,4 +1,4 @@
-import { InnerMapClient } from './InnerMapClient';
+import { InnerMapClient } from './MapClient';
 import SuperlumeWebSocket from './ws';
 import { WebSocketDocCmdMessage } from './wsMessages';
 

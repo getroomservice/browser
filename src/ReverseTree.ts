@@ -128,8 +128,26 @@ export default class ReverseTree {
       if (node.after === 'root') {
         root.children.push(tree);
       } else {
+        /* This can happen if three or more people are 
+        editing this at once. For example:
+
+              +---+      
+          +-->| A |      
+          |   +---+      
+          |              
+          |              
+          |              
+        +---+       +---+
+        | B |------>| C |
+        +---+       +---+
+
+        If B adds something after C, but A and C haven't 
+        synced up yet, then A may not know how to apply that 
+        change. To prevent this from diverging, we'll
+        ignore this branch for the time being.
+        */
         if (!trees[node.after]) {
-          throw new Error(`Unexpectedly missing node ${node.after}`);
+          continue;
         }
 
         trees[node.after].children.push(tree);

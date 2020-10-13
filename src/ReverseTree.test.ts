@@ -6,6 +6,27 @@ test('reverse tree can insert items', () => {
   expect(rt.toArray()).toEqual(['dogs']);
 });
 
+test('reverse tree skips unreceived dependencies', () => {
+  const rt = new ReverseTree('me');
+  rt.import(
+    {
+      id: 'doc',
+      actors: ['me', 'you', 'bogaloo'],
+      lists: {
+        list: {
+          // known, known, unknown, unknown
+          ids: ['1:0', '2:0', '1:1', '1:2'],
+          afters: ['root', '1:0', '1:2', '1:1'],
+          values: ['cat', 'dog', 'bird', 'snake'],
+        },
+      },
+    } as any,
+    'list'
+  );
+
+  expect(rt.toArray()).toEqual(['cat', 'dog']);
+});
+
 test('reverse tree can insert lots of items', () => {
   const rt = new ReverseTree('me');
 

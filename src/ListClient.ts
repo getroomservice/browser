@@ -190,6 +190,12 @@ export class InnerListClient<T extends any> implements ObjectClient {
     return this.clone();
   }
 
+  map<T extends any>(fn: (val: T, index: number, key: string) => T[]): T[] {
+    return this.rt
+      .postOrderTraverse()
+      .map((m, i) => fn(unescape(m.value) as T, i, m.id)) as Array<T>;
+  }
+
   toArray(): T[] {
     return this.rt.toArray().map(m => unescape(m)) as any[];
   }

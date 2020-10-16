@@ -61,6 +61,7 @@ describe('InnerMapClient', () => {
 
     expect(val).toEqual({
       dogs: 'good',
+      name: 'alice',
       snakes: 'snakey',
     });
   });

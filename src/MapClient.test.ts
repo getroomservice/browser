@@ -52,4 +52,17 @@ describe('InnerMapClient', () => {
     map.dangerouslyUpdateClientDirectly(['mdel', 'doc', 'map', 'cats']);
     expect(map.get('cats')).toBeFalsy();
   });
+
+  test('interprets mput', () => {
+    const val = map
+      .set('dogs', 'good')
+      .set('snakes', 'snakey')
+      .toObject();
+
+    expect(val).toEqual({
+      dogs: 'good',
+      name: 'alice',
+      snakes: 'snakey',
+    });
+  });
 });

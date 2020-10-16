@@ -26,11 +26,11 @@ type ListenerBundle = Array<Listener>;
 type Omit<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>>;
 export type MapClient<T> = Omit<
   InnerMapClient<T>,
-  'dangerouslyUpdateClientDirectly'
+  'dangerouslyUpdateClientDirectly' | 'id'
 >;
 export type ListClient<T> = Omit<
   InnerListClient<T>,
-  'dangerouslyUpdateClientDirectly'
+  'dangerouslyUpdateClientDirectly' | 'id'
 >;
 export type PresenceClient = Omit<
   InnerPresenceClient,
@@ -110,7 +110,7 @@ export class RoomClient {
     return this.actor;
   }
 
-  list<T extends any>(name: string): InnerListClient<T> {
+  list<T extends any>(name: string): ListClient<T> {
     if (this.listClients[name]) {
       return this.listClients[name];
     }
@@ -143,7 +143,7 @@ export class RoomClient {
     return l;
   }
 
-  map<T extends any>(name: string): InnerMapClient<T> {
+  map<T extends any>(name: string): MapClient<T> {
     if (this.mapClients[name]) {
       return this.mapClients[name];
     }
@@ -168,7 +168,7 @@ export class RoomClient {
     return m;
   }
 
-  presence(): InnerPresenceClient {
+  presence(): PresenceClient {
     if (this.InnerPresenceClient) {
       return this.InnerPresenceClient;
     }

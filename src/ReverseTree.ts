@@ -190,36 +190,39 @@ export default class ReverseTree {
     return right(root).id;
   }
 
-  toArray(): Array<any> {
+  postOrderTraverse() {
     this.sortLog();
 
     // -- Convert the log into a regular tree
     const root = this.toTree();
 
     // -- Do a depth-first traversal to get the result
-    function postorder(t: Tree): string[] {
+    function postorder(t: Tree): Tree[] {
       if (!t.children || t.children.length === 0) {
         return [];
       }
 
-      let vals: string[] = [];
+      let children: Tree[] = [];
       for (let child of t.children) {
-        let value = child.value;
         if (typeof child.value !== 'string') {
           // Skip tombstones
           if (child.value.t === '') {
-            vals = vals.concat([...postorder(child)]);
+            children = children.concat([...postorder(child)]);
             continue;
           }
           throw new Error('Unimplemented');
         }
 
-        vals = vals.concat([value, ...postorder(child)]);
+        children = children.concat([child, ...postorder(child)]);
       }
 
-      return vals;
+      return children;
     }
 
     return postorder(root);
+  }
+
+  toArray(): Array<any> {
+    return this.postOrderTraverse().map(c => c.value);
   }
 }

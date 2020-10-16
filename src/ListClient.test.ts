@@ -47,6 +47,44 @@ describe('list clients', () => {
     expect(finishedAlpha.toArray()).toEqual(['"1"', '2', 3, '']);
   });
 
+  test('list clients can map over items', () => {
+    const alpha = new InnerListClient(
+      checkpoint,
+      roomID,
+      docID,
+      listID,
+      ws,
+      'alpha'
+    );
+
+    const finished = alpha
+      .push(1)
+      .push({ x: 20, y: 30 })
+      .push(3)
+      .push('cats');
+
+    expect(finished.map((val, i, key) => [val, i, key])).toEqual([
+      [1, 0, '0:alpha'],
+      [{ x: 20, y: 30 }, 1, '1:alpha'],
+      [3, 2, '2:alpha'],
+      ['cats', 3, '3:alpha'],
+    ]);
+  });
+
+  test('list.push supports varags', () => {
+    const alpha = new InnerListClient(
+      checkpoint,
+      roomID,
+      docID,
+      listID,
+      ws,
+      'alpha'
+    );
+
+    const finished = alpha.push(1, 2, 'boogaloo');
+    expect(finished.toArray()).toEqual([1, 2, 'boogaloo']);
+  });
+
   test('List Clients send stuff to websockets', () => {
     const send = jest.fn();
     const ws = new SuperlumeWebSocket({

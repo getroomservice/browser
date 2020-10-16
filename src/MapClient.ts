@@ -103,6 +103,14 @@ export class InnerMapClient<T extends any> implements ObjectClient {
     return this.clone();
   }
 
+  toObject(): { [key: string]: T } {
+    const obj = {} as { [key: string]: T };
+    for (let key of this.keys) {
+      obj[key] = this.get(key);
+    }
+    return obj;
+  }
+
   delete(key: string): InnerMapClient<T> {
     // local
     delete this.store[key];

@@ -47,7 +47,7 @@ describe('list clients', () => {
     expect(finishedAlpha.toArray()).toEqual(['"1"', '2', 3, '']);
   });
 
-  test('list clietns can map over items', () => {
+  test('list clients can map over items', () => {
     const alpha = new InnerListClient(
       checkpoint,
       roomID,

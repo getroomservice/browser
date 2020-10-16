@@ -176,7 +176,7 @@ export class InnerListClient<T extends any> implements ObjectClient {
     return this.clone();
   }
 
-  push(val: T): InnerListClient<T> {
+  private pushOne(val: T): InnerListClient<T> {
     let lastID = this.rt.lastID();
     const escaped = escape(val as any);
 
@@ -188,6 +188,14 @@ export class InnerListClient<T extends any> implements ObjectClient {
     this.sendCmd(['lins', this.docID, this.id, lastID, itemID, escaped]);
 
     return this.clone();
+  }
+
+  push(...args: T[]): InnerListClient<T> {
+    let self;
+    for (let arg of args) {
+      self = this.pushOne(arg);
+    }
+    return self as InnerListClient<T>;
   }
 
   map<T extends any>(fn: (val: T, index: number, key: string) => T[]): T[] {

@@ -71,6 +71,20 @@ describe('list clients', () => {
     ]);
   });
 
+  test('list.push supports varags', () => {
+    const alpha = new InnerListClient(
+      checkpoint,
+      roomID,
+      docID,
+      listID,
+      ws,
+      'alpha'
+    );
+
+    const finished = alpha.push(1, 2, 'boogaloo');
+    expect(finished.toArray()).toEqual([1, 2, 'boogaloo']);
+  });
+
   test('List Clients send stuff to websockets', () => {
     const send = jest.fn();
     const ws = new SuperlumeWebSocket({

@@ -26,11 +26,11 @@ type ListenerBundle = Array<Listener>;
 type Omit<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>>;
 export type MapClient<T> = Omit<
   InnerMapClient<T>,
-  'dangerouslyUpdateClientDirectly'
+  'dangerouslyUpdateClientDirectly' | 'id'
 >;
 export type ListClient<T> = Omit<
   InnerListClient<T>,
-  'dangerouslyUpdateClientDirectly'
+  'dangerouslyUpdateClientDirectly' | 'id'
 >;
 export type PresenceClient = Omit<
   InnerPresenceClient,

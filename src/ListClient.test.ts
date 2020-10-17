@@ -81,8 +81,8 @@ describe('list clients', () => {
       'alpha'
     );
 
-    const finished = alpha.push(1, 2, 'boogaloo');
-    expect(finished.toArray()).toEqual([1, 2, 'boogaloo']);
+    const finished = alpha.push(1, 2, 'foo');
+    expect(finished.toArray()).toEqual([1, 2, 'foo']);
   });
 
   test('List Clients send stuff to websockets', () => {

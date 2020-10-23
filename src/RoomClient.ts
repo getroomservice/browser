@@ -50,6 +50,7 @@ export class RoomClient {
   private InnerPresenceClient?: InnerPresenceClient;
   private listClients: { [key: string]: InnerListClient<any> } = {};
   private mapClients: { [key: string]: InnerMapClient<any> } = {};
+  private expires: { [key: string]: NodeJS.Timeout } = {};
 
   constructor(params: {
     conn: WebSocketLikeConnection;
@@ -266,16 +267,20 @@ export class RoomClient {
       if (body.key !== key) return;
       if (body.from === this.actor) return;
 
-      const now = new Date().getSeconds() / 1000;
-      const timeout = now - body.expAt;
-      if (timeout < 0) {
+      const now = new Date().getTime() / 1000;
+      const secondsTillTimeout = body.expAt - now;
+      if (secondsTillTimeout < 0) {
         // don't show expired stuff
         return;
       }
 
       // Expire stuff if it's within a reasonable range (12h)
-      if (timeout < 60 * 60 * 12) {
-        setTimeout(() => {
+      if (secondsTillTimeout < 60 * 60 * 12) {
+        if (this.expires[key]) {
+          clearTimeout(this.expires[key])
+        }
+
+        let timeout = setTimeout(() => {
           const newObj = (obj as InnerPresenceClient).dangerouslyUpdateClientDirectly(
             'presence:expire',
             { key: body.key }
@@ -283,7 +288,9 @@ export class RoomClient {
           if (!newObj) return;
           invariant(onChangeFn);
           onChangeFn(newObj, body.from);
-        }, timeout);
+        }, secondsTillTimeout * 1000);
+
+        this.expires[key] = timeout;
       }
 
       const newObj = (obj as InnerPresenceClient).dangerouslyUpdateClientDirectly(

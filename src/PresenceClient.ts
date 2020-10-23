@@ -46,12 +46,17 @@ export class InnerPresenceClient {
     return this.withoutExpiredAndSelf(key);
   }
 
+  // private expire(key: string, actor: string) {
+  //   if (this.cache && this.cache[key] && this.cache[key][actor]) {
+  //     delete this.cache[key][actor];
+  //   }
+  // }
+
   private withoutExpiredAndSelf(key: string) {
     const result = {} as { [key: string]: any };
     for (let actor in this.cache[key]) {
       const obj = this.cache[key][actor];
 
-      // Remove expired
       if (new Date() > obj.expAt) {
         delete this.cache[key][actor];
         continue;
@@ -159,7 +164,8 @@ export class InnerPresenceClient {
       return this.withoutActorOrExpired(body.guest);
     }
     if (type === 'presence:expire') {
-      return this.withoutExpiredAndSelf(body.key);
+      const foo = this.withoutExpiredAndSelf(body.key);
+      return foo;
     }
 
     if (body.room !== this.roomID) return false;

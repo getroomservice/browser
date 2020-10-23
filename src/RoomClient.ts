@@ -50,6 +50,7 @@ export class RoomClient {
   private InnerPresenceClient?: InnerPresenceClient;
   private listClients: { [key: string]: InnerListClient<any> } = {};
   private mapClients: { [key: string]: InnerMapClient<any> } = {};
+  private expires: { [key: string]: NodeJS.Timeout } = {};
 
   constructor(params: {
     conn: WebSocketLikeConnection;
@@ -216,44 +217,7 @@ export class RoomClient {
   ): ListenerBundle {
     // Presence handler
     if (typeof onChangeFnOrString === 'string') {
-      invariant(
-        obj,
-        'subscribe() expects the first argument to not be undefined.'
-      );
-      const fwdListener = this.ws.bind('presence:fwd', body => {
-        if (body.room !== this.roomID) return;
-        if (body.key !== onChangeFnOrString) return;
-        if (body.from === this.actor) return;
-
-        const newObj = (obj as InnerPresenceClient).dangerouslyUpdateClientDirectly(
-          'presence:fwd',
-          body
-        );
-        if (!newObj) return;
-        invariant(onChangeFn);
-        onChangeFn(newObj, body.from);
-      });
-      const leaveListener = this.ws.bind('room:rm_guest', body => {
-        if (body.room !== this.roomID) return;
-        const newObj = (obj as InnerPresenceClient).dangerouslyUpdateClientDirectly(
-          'room:rm_guest',
-          body
-        );
-        if (!newObj) return;
-        invariant(onChangeFn);
-        onChangeFn(newObj, body.guest);
-      });
-
-      return [
-        {
-          event: 'presence:fwd',
-          fn: fwdListener,
-        },
-        {
-          event: 'room:rm_guest',
-          fn: leaveListener,
-        },
-      ];
+      return this.subscribePresence<T>(obj, onChangeFnOrString, onChangeFn);
     }
 
     // Map and list handler
@@ -285,6 +249,77 @@ export class RoomClient {
       {
         event: 'doc:fwd',
         fn: bound,
+      },
+    ];
+  }
+
+  private subscribePresence<T extends any>(
+    obj: any,
+    key: string,
+    onChangeFn: ((obj: { [key: string]: T }, from: string) => any) | undefined
+  ): ListenerBundle {
+    invariant(
+      obj,
+      'subscribe() expects the first argument to not be undefined.'
+    );
+    const fwdListener = this.ws.bind('presence:fwd', body => {
+      if (body.room !== this.roomID) return;
+      if (body.key !== key) return;
+      if (body.from === this.actor) return;
+
+      const now = new Date().getTime() / 1000;
+      const secondsTillTimeout = body.expAt - now;
+      if (secondsTillTimeout < 0) {
+        // don't show expired stuff
+        return;
+      }
+
+      // Expire stuff if it's within a reasonable range (12h)
+      if (secondsTillTimeout < 60 * 60 * 12) {
+        if (this.expires[key]) {
+          clearTimeout(this.expires[key])
+        }
+
+        let timeout = setTimeout(() => {
+          const newObj = (obj as InnerPresenceClient).dangerouslyUpdateClientDirectly(
+            'presence:expire',
+            { key: body.key }
+          );
+          if (!newObj) return;
+          invariant(onChangeFn);
+          onChangeFn(newObj, body.from);
+        }, secondsTillTimeout * 1000);
+
+        this.expires[key] = timeout;
+      }
+
+      const newObj = (obj as InnerPresenceClient).dangerouslyUpdateClientDirectly(
+        'presence:fwd',
+        body
+      );
+      if (!newObj) return;
+      invariant(onChangeFn);
+      onChangeFn(newObj, body.from);
+    });
+    const leaveListener = this.ws.bind('room:rm_guest', body => {
+      if (body.room !== this.roomID) return;
+      const newObj = (obj as InnerPresenceClient).dangerouslyUpdateClientDirectly(
+        'room:rm_guest',
+        body
+      );
+      if (!newObj) return;
+      invariant(onChangeFn);
+      onChangeFn(newObj, body.guest);
+    });
+
+    return [
+      {
+        event: 'presence:fwd',
+        fn: fwdListener,
+      },
+      {
+        event: 'room:rm_guest',
+        fn: leaveListener,
       },
     ];
   }

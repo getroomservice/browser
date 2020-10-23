@@ -109,7 +109,7 @@ export default function Home() {
         x: e.clientX,
         y: e.clientY,
       },
-      20
+      1
     );
   }
 

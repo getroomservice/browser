@@ -46,12 +46,6 @@ export class InnerPresenceClient {
     return this.withoutExpiredAndSelf(key);
   }
 
-  // private expire(key: string, actor: string) {
-  //   if (this.cache && this.cache[key] && this.cache[key][actor]) {
-  //     delete this.cache[key][actor];
-  //   }
-  // }
-
   private withoutExpiredAndSelf(key: string) {
     const result = {} as { [key: string]: any };
     for (let actor in this.cache[key]) {

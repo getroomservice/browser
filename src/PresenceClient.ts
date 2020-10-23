@@ -142,7 +142,13 @@ export class InnerPresenceClient {
     [key: string]: any;
   };
   dangerouslyUpdateClientDirectly(
-    type: 'room:rm_guest' | 'presence:fwd',
+    type: 'presence:expire',
+    body: { key: string }
+  ): {
+    [key: string]: any;
+  };
+  dangerouslyUpdateClientDirectly(
+    type: 'room:rm_guest' | 'presence:fwd' | 'presence:expire',
     body: any
   ):
     | {
@@ -151,6 +157,9 @@ export class InnerPresenceClient {
     | false {
     if (type === 'room:rm_guest') {
       return this.withoutActorOrExpired(body.guest);
+    }
+    if (type === 'presence:expire') {
+      return this.withoutExpiredAndSelf(body.key);
     }
 
     if (body.room !== this.roomID) return false;

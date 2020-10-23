@@ -266,6 +266,26 @@ export class RoomClient {
       if (body.key !== key) return;
       if (body.from === this.actor) return;
 
+      const now = new Date().getSeconds() / 1000;
+      const timeout = now - body.expAt;
+      if (timeout < 0) {
+        // don't show expired stuff
+        return;
+      }
+
+      // Expire stuff if it's within a reasonable range (12h)
+      if (timeout < 60 * 60 * 12) {
+        setTimeout(() => {
+          const newObj = (obj as InnerPresenceClient).dangerouslyUpdateClientDirectly(
+            'presence:expire',
+            { key: body.key }
+          );
+          if (!newObj) return;
+          invariant(onChangeFn);
+          onChangeFn(newObj, body.from);
+        }, timeout);
+      }
+
       const newObj = (obj as InnerPresenceClient).dangerouslyUpdateClientDirectly(
         'presence:fwd',
         body

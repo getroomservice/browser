@@ -1,10 +1,10 @@
-export default function throttle<T extends Function>(
+export function throttleByFirstArgument<T extends Function>(
   callback: T,
   wait: number,
   immediate = false
 ): T {
   // @ts-ignore
-  let timeout = null;
+  let timeouts = {} as any;
   let initialCall = true;
 
   return function() {
@@ -12,7 +12,9 @@ export default function throttle<T extends Function>(
     const next = () => {
       // @ts-ignore
       callback.apply(this, arguments);
-      timeout = null;
+
+      // @ts-ignore
+      timeouts[arguments[0]] = null;
     };
 
     if (callNow) {
@@ -21,8 +23,8 @@ export default function throttle<T extends Function>(
     }
 
     // @ts-ignore
-    if (!timeout) {
-      timeout = setTimeout(next, wait);
+    if (!timeouts[arguments[0]]) {
+      timeouts[arguments[0]] = setTimeout(next, wait);
     }
   } as any;
 }

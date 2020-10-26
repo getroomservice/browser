@@ -6,7 +6,7 @@ import {
   WebSocketPresenceFwdMessage,
   WebSocketLeaveMessage,
 } from './wsMessages';
-import throttle from './throttle';
+import { throttleByFirstArgument } from './throttle';
 
 export class InnerPresenceClient {
   private roomID: string;
@@ -14,7 +14,7 @@ export class InnerPresenceClient {
   private actor: string;
   private token: string;
   private cache: { [key: string]: PresenceCheckpoint<any> };
-  private send: Prop<SuperlumeWebSocket, 'send'>;
+  private sendPres: (key: string, args: any) => any;
 
   constructor(
     roomID: string,
@@ -27,7 +27,11 @@ export class InnerPresenceClient {
     this.actor = actor;
     this.token = token;
     this.cache = {};
-    this.send = throttle(this.ws.send.bind(this.ws), 40);
+
+    const sendPres = (_: string, args: any) => {
+      this.ws.send('presence:cmd', args);
+    };
+    this.sendPres = throttleByFirstArgument(sendPres, 40);
   }
 
   /**
@@ -109,7 +113,7 @@ export class InnerPresenceClient {
     // Convert to unix + add seconds
     const expAt = Math.round(new Date().getTime() / 1000) + addition;
 
-    this.send('presence:cmd', {
+    this.sendPres(key, {
       room: this.roomID,
       key: key,
       value: JSON.stringify(value),

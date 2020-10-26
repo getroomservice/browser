@@ -262,6 +262,7 @@ export class RoomClient {
       obj,
       'subscribe() expects the first argument to not be undefined.'
     );
+
     const fwdListener = this.ws.bind('presence:fwd', body => {
       if (body.room !== this.roomID) return;
       if (body.key !== key) return;
@@ -277,7 +278,7 @@ export class RoomClient {
       // Expire stuff if it's within a reasonable range (12h)
       if (secondsTillTimeout < 60 * 60 * 12) {
         if (this.expires[key]) {
-          clearTimeout(this.expires[key])
+          clearTimeout(this.expires[key]);
         }
 
         let timeout = setTimeout(() => {

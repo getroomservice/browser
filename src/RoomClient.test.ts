@@ -1,78 +1,49 @@
 import { RoomClient } from './RoomClient';
-import { WebSocketClientMessage } from './wsMessages';
 import { DocumentCheckpoint } from './types';
+import { LocalSession } from 'remote';
 
-const cp: DocumentCheckpoint = {
-  api_version: 0,
-  id: 'doc_123',
-  index: 0,
-  vs: 'AAAAOTKy5nUAAA==',
-  actors: {},
-  lists: {},
-  maps: {
-    root: {},
-  },
-};
-
-test('RoomClient.connect() will send authenticate and connect messages', (done) => {
-  const conn = {
-    onmessage: (_?: MessageEvent) => {},
-    send: (_?: any) => {},
-    readyState: WebSocket.OPEN,
+export function mockSession(): LocalSession {
+  return {
+    token: 'mock token',
+    guestReference: 'mock actor',
+    docID: 'moc docID',
+    roomID: 'moc roomID',
   };
-  const client = new RoomClient({
+}
+
+export function mockCheckpoint(): DocumentCheckpoint {
+  return {
+    maps: {},
+    lists: {},
+    id: 'mock checkpoint',
+    index: 0,
+    api_version: 0,
+    vs: 'AAo=',
+    actors: [],
+  };
+}
+
+function mockRoomClient(): RoomClient {
+  const session = mockSession();
+  const checkpoint = mockCheckpoint();
+
+  return new RoomClient({
+    auth: 'xyz',
+    authCtx: null,
+    session,
+    wsURL: 'wss://websocket.invalid',
+    docsURL: 'https://docs.invalid',
     actor: 'me',
-    checkpoint: cp,
-    roomID: 'room',
-    token: 'token',
-    conn: conn,
+    checkpoint,
+    token: session.token,
+    roomID: session.roomID,
+    docID: session.docID,
   });
-
-  conn.send = (data: string) => {
-    const event = JSON.parse(data) as WebSocketClientMessage;
-
-    if (event.type === 'room:join') {
-      conn.onmessage({
-        data: JSON.stringify({
-          type: 'room:joined',
-          body: 'OK',
-          ver: 0,
-        }),
-      } as MessageEvent);
-      return;
-    }
-
-    if (event.type === 'guest:authenticate') {
-      conn.onmessage({
-        data: JSON.stringify({
-          type: 'guest:authenticated',
-          body: 'OK',
-          ver: 0,
-        }),
-      } as MessageEvent);
-      return;
-    }
-  };
-
-  client.reconnect().then(() => {
-    done();
-  });
-});
+}
 
 test('we catch infinite loops', () => {
   function thisThrows() {
-    const conn = {
-      onmessage: (_?: MessageEvent) => {},
-      send: (_?: any) => {},
-      readyState: WebSocket.OPEN,
-    };
-    const client = new RoomClient({
-      actor: 'me',
-      checkpoint: cp,
-      roomID: 'room',
-      token: 'token',
-      conn: conn,
-    });
+    const client = mockRoomClient();
     const m = client.map('mymap');
     client.subscribe(m, () => {
       m.set('I', 'cause an infinite loop');

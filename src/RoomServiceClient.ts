@@ -1,6 +1,6 @@
-import { WS_URL, DOCS_URL } from './constants';
+import { DOCS_URL } from './constants';
 import { createRoom, RoomClient } from './RoomClient';
-import { WebSocketLikeConnection, AuthStrategy, AuthFunction } from 'types';
+import { AuthStrategy, AuthFunction } from 'types';
 
 interface SimpleAuthParams {
   auth: string;
@@ -30,9 +30,7 @@ export class RoomService<T extends object> {
       return this.roomClients[name];
     }
 
-    const ws = new WebSocket(WS_URL);
     const client = await createRoom<T>({
-      conn: ws as WebSocketLikeConnection,
       docsURL: DOCS_URL,
       authStrategy: this.auth,
       authCtx: this.ctx,

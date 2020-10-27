@@ -1,4 +1,4 @@
-import SuperlumeWebSocket from './ws';
+import { SuperlumeSend } from './ws';
 import { ObjectClient, DocumentCheckpoint } from './types';
 import invariant from 'tiny-invariant';
 import { LocalBus } from './localbus';
@@ -8,7 +8,7 @@ export type ListObject = Array<any>;
 
 export class InnerListClient<T extends ListObject> implements ObjectClient {
   private roomID: string;
-  private ws: SuperlumeWebSocket;
+  private ws: SuperlumeSend;
   private bus: LocalBus<any>;
   private actor: string;
   private store: ListStore;
@@ -21,7 +21,7 @@ export class InnerListClient<T extends ListObject> implements ObjectClient {
     roomID: string;
     docID: string;
     listID: string;
-    ws: SuperlumeWebSocket;
+    ws: SuperlumeSend;
     actor: string;
     bus: LocalBus<{ args: string[]; from: string }>;
   }) {
@@ -47,6 +47,14 @@ export class InnerListClient<T extends ListObject> implements ObjectClient {
     ListInterpreter.importFromRawCheckpoint(
       this.store,
       props.checkpoint,
+      this.meta.listID
+    );
+  }
+
+  bootstrap(checkpoint: DocumentCheckpoint) {
+    ListInterpreter.importFromRawCheckpoint(
+      this.store,
+      checkpoint,
       this.meta.listID
     );
   }
@@ -141,7 +149,7 @@ export class InnerListClient<T extends ListObject> implements ObjectClient {
     return ListInterpreter.map(this.store, fn);
   }
 
-  toArray(): T[] {
+  toArray(): T[number][] {
     return ListInterpreter.toArray<T[number]>(this.store);
   }
 }

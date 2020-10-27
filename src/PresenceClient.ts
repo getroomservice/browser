@@ -1,4 +1,4 @@
-import SuperlumeWebSocket from './ws';
+import { SuperlumeSend } from './ws';
 import { PresenceCheckpoint, Prop } from './types';
 import { fetchPresence } from './remote';
 import { PRESENCE_URL } from './constants';
@@ -11,7 +11,7 @@ import { LocalBus } from 'localbus';
 
 export class InnerPresenceClient {
   private roomID: string;
-  private ws: SuperlumeWebSocket;
+  private ws: SuperlumeSend;
   private actor: string;
   private token: string;
   private cache: { [key: string]: PresenceCheckpoint<any> };
@@ -20,7 +20,7 @@ export class InnerPresenceClient {
 
   constructor(props: {
     roomID: string;
-    ws: SuperlumeWebSocket;
+    ws: SuperlumeSend;
     actor: string;
     token: string;
     bus: LocalBus<{ key: string; value: any; expAt: number }>;

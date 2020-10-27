@@ -1,5 +1,5 @@
 import { ObjectClient } from './types';
-import SuperlumeWebSocket from './ws';
+import { SuperlumeSend } from './ws';
 import { LocalBus } from './localbus';
 import {
   MapMeta,
@@ -12,7 +12,7 @@ export type MapObject = { [key: string]: any };
 
 export class InnerMapClient<T extends MapObject> implements ObjectClient {
   private roomID: string;
-  private ws: SuperlumeWebSocket;
+  private ws: SuperlumeSend;
 
   private meta: MapMeta;
   private store: MapStore<any>;
@@ -25,7 +25,7 @@ export class InnerMapClient<T extends MapObject> implements ObjectClient {
     docID: string;
     mapID: string;
     actor: string;
-    ws: SuperlumeWebSocket;
+    ws: SuperlumeSend;
     bus: LocalBus<{ from: string; args: string[] }>;
   }) {
     this.roomID = props.roomID;
@@ -37,9 +37,18 @@ export class InnerMapClient<T extends MapObject> implements ObjectClient {
     this.store = store;
     this.meta = meta;
 
+    //TODO: defer initial bootstrap?
     MapInterpreter.importFromRawCheckpoint(
       this.store,
       props.checkpoint,
+      this.meta.mapID
+    );
+  }
+
+  public bootstrap(checkpoint: DocumentCheckpoint) {
+    MapInterpreter.importFromRawCheckpoint(
+      this.store,
+      checkpoint,
       this.meta.mapID
     );
   }

@@ -1,23 +1,24 @@
-import SuperlumeWebSocket from './ws';
 import {
-  WebSocketLikeConnection,
-  DocumentCheckpoint,
-  AuthStrategy,
-  Prop,
-} from './types';
-import { fetchSession, fetchDocument } from './remote';
+  ForwardedMessageBody,
+  ReconnectingWebSocket,
+  WebsocketDispatch,
+} from './ws';
+import { DocumentCheckpoint, AuthStrategy, Prop } from './types';
+import { fetchSession, fetchDocument, LocalSession } from './remote';
 import { InnerListClient, ListObject } from './ListClient';
 import { InnerMapClient, MapObject } from './MapClient';
 import { InnerPresenceClient } from './PresenceClient';
 import invariant from 'tiny-invariant';
 import { vsReader } from '@roomservice/core';
 import {
+  WebSocketDocFwdMessage,
+  WebSocketLeaveMessage,
   WebSocketPresenceFwdMessage,
   WebSocketServerMessage,
 } from './wsMessages';
 import { LocalBus } from './localbus';
-
-const WEBSOCKET_TIMEOUT = 1000 * 2;
+import { WS_URL } from './constants';
+import { DOCS_URL } from './constants';
 
 type Listener = {
   event?: Prop<WebSocketServerMessage, 'type'>;
@@ -50,86 +51,138 @@ interface DispatchDocCmdMsg {
   from: string;
 }
 
-export class RoomClient {
-  private ws: SuperlumeWebSocket;
+export class RoomClient implements WebsocketDispatch {
   private token: string;
   private roomID: string;
   private docID: string;
   private actor: string;
   private checkpoint: DocumentCheckpoint;
-  private errorListener: any;
 
   private InnerPresenceClient?: InnerPresenceClient;
   private listClients: { [key: string]: InnerListClient<any> } = {};
   private mapClients: { [key: string]: InnerMapClient<any> } = {};
   private expires: { [key: string]: NodeJS.Timeout } = {};
 
+  private ws: ReconnectingWebSocket;
+
   constructor(params: {
-    conn: WebSocketLikeConnection;
+    auth: AuthStrategy<any>;
+    authCtx: any;
+    session: LocalSession;
+    wsURL: string;
+    docsURL: string;
     actor: string;
     checkpoint: DocumentCheckpoint;
     token: string;
     roomID: string;
+    docID: string;
   }) {
-    this.ws = new SuperlumeWebSocket(params.conn);
+    const { wsURL, docsURL, roomID } = params;
+    this.ws = new ReconnectingWebSocket({
+      dispatcher: this,
+      wsURL,
+      docsURL,
+      room: roomID,
+      session: params.session,
+    });
     this.token = params.token;
     this.roomID = params.roomID;
     this.docID = params.checkpoint.id;
     this.actor = params.actor;
     this.checkpoint = params.checkpoint;
-    this.InnerPresenceClient = undefined;
+  }
 
-    const vs = vsReader(window.atob);
+  //  impl WebsocketDispatch
+  forwardCmd(msgType: string, body: ForwardedMessageBody): void {
+    if (this.queueIncomingCmds) {
+      this.cmdQueue.push([msgType, body]);
+      return;
+    }
+    this.processCmd(msgType, body);
+  }
 
-    this.ws.bind('doc:fwd', (body) => {
-      if (body.room !== this.roomID) return;
-      if (!body.args || body.args.length < 3) {
-        // Potentially a network failure, we don't want to crash,
-        // but do want to warn people
-        console.error('Unexpected command: ', body.args);
-        return;
-      }
-      // Ignore version stamps older than checkpoint
-      if (vs.isOlderVS(body.vs, this.checkpoint.vs)) return;
-
-      // Ignore validated commands
-      if (body.from === this.actor) return;
-
-      const [cmd, docID, objID] = [body.args[0], body.args[1], body.args[2]];
-
-      if (docID !== this.docID) return;
-
-      if (MAP_CMDS.includes(cmd)) {
-        this.dispatchMapCmd(objID, body);
-      } else if (LIST_CMDS.includes(cmd)) {
-        this.dispatchListCmd(objID, body);
-      } else {
-        console.warn(
-          'Unhandled Room Service doc:fwd command: ' +
-            cmd +
-            '. Consider updating the Room Service client.'
-        );
-      }
-    });
-
-    this.ws.bind('presence:fwd', (body) => {
+  processCmd(msgType: string, body: ForwardedMessageBody) {
+    if (msgType == 'doc:fwd' && 'args' in body) {
+      this.dispatchDocCmd(body);
+    }
+    if (msgType == 'presence:fwd' && 'expAt' in body) {
       this.dispatchPresenceCmd(body);
-    });
+    }
+    if (msgType == 'room:rm_guest' && 'guest' in body) {
+      this.dispatchRmGuest(body);
+    }
+  }
 
-    this.ws.bind('room:rm_guest', (body) => {
-      if (body.room !== this.roomID) return;
-      const client = this.presence() as InnerPresenceClient;
+  bootstrap(checkpoint: DocumentCheckpoint): void {
+    this.checkpoint = checkpoint;
+    for (const [_, client] of Object.entries(this.listClients)) {
+      client.bootstrap(checkpoint);
+    }
+    for (const [_, client] of Object.entries(this.mapClients)) {
+      client.bootstrap(checkpoint);
+    }
+    this.queueIncomingCmds = false;
+    for (const [msgType, body] of this.cmdQueue) {
+      this.processCmd(msgType, body);
+    }
+    this.cmdQueue.length = 0;
+  }
 
-      const newClient = client.dangerouslyUpdateClientDirectly(
-        'room:rm_guest',
-        body
+  private queueIncomingCmds: boolean = true;
+  private cmdQueue: Array<[string, ForwardedMessageBody]> = [];
+
+  startQueueingCmds(): void {
+    this.queueIncomingCmds = true;
+  }
+
+  dispatchDocCmd(body: Prop<WebSocketDocFwdMessage, 'body'>) {
+    if (body.room !== this.roomID) return;
+    if (!body.args || body.args.length < 3) {
+      // Potentially a network failure, we don't want to crash,
+      // but do want to warn people
+      console.error('Unexpected command: ', body.args);
+      return;
+    }
+    // Ignore version stamps older than checkpoint
+    if (vsReader(atob).isOlderVS(body.vs, this.checkpoint.vs)) {
+      return;
+    }
+
+    // Ignore validated commands
+    if (body.from === this.actor) {
+      return;
+    }
+
+    const [cmd, docID, objID] = [body.args[0], body.args[1], body.args[2]];
+
+    if (docID !== this.docID) return;
+
+    if (MAP_CMDS.includes(cmd)) {
+      this.dispatchMapCmd(objID, body);
+    } else if (LIST_CMDS.includes(cmd)) {
+      this.dispatchListCmd(objID, body);
+    } else {
+      console.warn(
+        'Unhandled Room Service doc:fwd command: ' +
+          cmd +
+          '. Consider updating the Room Service client.'
       );
-      for (let [_, cbs] of Object.entries(this.presenceCallbacksByKey)) {
-        for (const cb of cbs) {
-          cb(newClient, body.guest);
-        }
+    }
+  }
+
+  dispatchRmGuest(body: Prop<WebSocketLeaveMessage, 'body'>) {
+    if (body.room !== this.roomID) return;
+    const client = this.presence() as InnerPresenceClient;
+
+    const newClient = client.dangerouslyUpdateClientDirectly(
+      'room:rm_guest',
+      body
+    );
+    for (let [_, cbs] of Object.entries(this.presenceCallbacksByKey)) {
+      for (const cb of cbs) {
+        cb(newClient, body.guest);
       }
-    });
+    }
   }
 
   private dispatchMapCmd(objID: string, body: DispatchDocCmdMsg) {
@@ -200,44 +253,6 @@ export class RoomClient {
     for (const cb of this.presenceCallbacksByKey[key] ?? []) {
       cb(newClient, body.from);
     }
-  }
-
-  private async once(msg: string) {
-    let off: (args: any) => any;
-    return Promise.race([
-      new Promise((_, reject) =>
-        setTimeout(() => reject('timeout'), WEBSOCKET_TIMEOUT)
-      ),
-      new Promise((resolve) => {
-        off = this.ws.bind(msg as any, (body) => {
-          resolve(body);
-        });
-      }),
-    ]).then(() => {
-      if (off) this.ws.unbind(msg, off);
-    });
-  }
-
-  /**
-   * TODO: don't expose this function
-   */
-  async reconnect() {
-    if (!this.errorListener) {
-      this.errorListener = this.ws.bind('error', (err) => {
-        console.error(
-          'Room Service encountered a server-side error. If you see this, please let us know; this could be a bug.',
-          err
-        );
-      });
-    }
-
-    const authenticated = this.once('guest:authenticated');
-    this.ws.send('guest:authenticate', this.token);
-    await authenticated;
-
-    const joined = this.once('room:joined');
-    this.ws.send('room:join', this.roomID);
-    await joined;
   }
 
   get me() {
@@ -469,36 +484,40 @@ export class RoomClient {
           l.fn
         );
       }
-      if (l.event) {
-        this.ws.unbind(l.event, l.fn);
-      }
     }
   }
 }
 
-export async function createRoom<T extends object>(params: {
-  conn: WebSocketLikeConnection;
+export async function createRoom<A extends object>(params: {
   docsURL: string;
-  authStrategy: AuthStrategy<T>;
-  authCtx: T;
+  authStrategy: AuthStrategy<A>;
+  authCtx: A;
   room: string;
   document: string;
 }): Promise<RoomClient> {
-  const sess = await fetchSession(
+  const session = await fetchSession(
     params.authStrategy,
     params.authCtx,
     params.room,
     params.document
   );
-  const { body } = await fetchDocument(params.docsURL, sess.token, sess.docID);
+  const { body } = await fetchDocument(
+    params.docsURL,
+    session.token,
+    session.docID
+  );
   const roomClient = new RoomClient({
-    conn: params.conn,
-    actor: sess.guestReference,
+    actor: session.guestReference,
     checkpoint: body,
-    token: sess.token,
-    roomID: sess.roomID,
+    token: session.token,
+    roomID: session.roomID,
+    docID: params.document,
+    auth: params.authStrategy,
+    authCtx: params.authCtx,
+    wsURL: WS_URL,
+    docsURL: DOCS_URL,
+    session,
   });
-  await roomClient.reconnect();
 
   return roomClient;
 }

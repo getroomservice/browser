@@ -1,7 +1,7 @@
 import { LocalBus } from './localbus';
 import { InnerListClient } from './ListClient';
-import { DocumentCheckpoint } from './types';
-import SuperlumeWebSocket from './ws';
+import { DocumentCheckpoint, Prop } from './types';
+import { WebSocketDocCmdMessage } from 'wsMessages';
 
 describe('list clients', () => {
   const checkpoint: DocumentCheckpoint = {
@@ -23,11 +23,7 @@ describe('list clients', () => {
   const docID = 'doc';
   const listID = 'list';
   const send = jest.fn();
-  const ws = new SuperlumeWebSocket({
-    onmessage: jest.fn(),
-    send,
-    readyState: WebSocket.OPEN,
-  });
+  const ws = { send };
 
   test("List clients don't include extra quotes", () => {
     const alpha = new InnerListClient({
@@ -83,11 +79,7 @@ describe('list clients', () => {
 
   test('List Clients send stuff to websockets', () => {
     const send = jest.fn();
-    const ws = new SuperlumeWebSocket({
-      onmessage: jest.fn(),
-      send,
-      readyState: WebSocket.OPEN,
-    });
+    const ws = { send };
 
     const alpha = new InnerListClient({
       checkpoint: checkpoint,
@@ -100,8 +92,8 @@ describe('list clients', () => {
     });
     alpha.push('cats');
 
-    const msg = JSON.parse(send.mock.calls[0][0]) as any;
-    expect(msg.body.args).toEqual([
+    const body = send.mock.calls[0][1] as Prop<WebSocketDocCmdMessage, 'body'>;
+    expect(body.args).toEqual([
       'lins',
       'doc',
       'list',
@@ -113,10 +105,7 @@ describe('list clients', () => {
 
   test('List Clients add stuff to the end of the list', () => {
     const send = jest.fn();
-    const ws = new SuperlumeWebSocket({
-      onmessage: jest.fn(),
-      send,
-    });
+    const ws = { send };
 
     let alpha = new InnerListClient({
       checkpoint,
@@ -173,10 +162,7 @@ describe('list clients', () => {
     };
 
     const send = jest.fn();
-    const ws = new SuperlumeWebSocket({
-      onmessage: jest.fn(),
-      send,
-    });
+    const ws = { send };
 
     let alpha = new InnerListClient({
       checkpoint: fixture.body,

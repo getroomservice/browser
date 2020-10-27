@@ -1,72 +1,81 @@
-import SuperlumeWebSocket from './ws';
-import { WebSocketJoinMessage } from './wsMessages';
+import { mockSession } from './RoomClient.test';
+import { Prop } from 'types';
+import {
+  DocumentFetch,
+  ReconnectingWebSocket,
+  WebsocketDispatch,
+  WebSocketFactory,
+} from './ws';
 
-test('websocket send will send a message of the right format', () => {
-  const send = jest.fn();
+function makeTestWSFactory(
+  send: Prop<WebSocket, 'send'>,
+  onmessage: Prop<WebSocket, 'onmessage'>
+): WebSocketFactory {
+  return async function (_: string) {
+    return {
+      onerror: jest.fn(),
+      send,
+      onmessage,
+      onclose: jest.fn(),
+      close: jest.fn(),
+    };
+  };
+}
+
+function mockDispatch(): WebsocketDispatch {
+  return {
+    forwardCmd: jest.fn(),
+    bootstrap: jest.fn(),
+    startQueueingCmds: jest.fn(),
+  };
+}
+
+function mockReconnectingWS(
+  send: Prop<WebSocket, 'send'>,
+  onmessage: Prop<WebSocket, 'onmessage'>,
+  fetch: DocumentFetch
+): ReconnectingWebSocket {
+  return new ReconnectingWebSocket({
+    dispatcher: mockDispatch(),
+    wsURL: 'wss://ws.invalid',
+    docsURL: 'https://docs.invalid',
+    room: 'mock-room',
+    session: mockSession(),
+    wsFactory: makeTestWSFactory(send, onmessage),
+    documentFetch: fetch,
+  });
+}
+
+test('Reconnecting WS sends handshake message using ws factory', async (done) => {
+  const [send, sendDone] = awaitFnNTimes(1);
   const onmessage = jest.fn();
+  const fetch = jest.fn();
 
-  const ws = new SuperlumeWebSocket({
-    send,
-    onmessage,
-    readyState: WebSocket.OPEN,
-  });
+  //@ts-ignore
+  const _ws = mockReconnectingWS(send, onmessage, fetch);
 
-  // Join
-  ws.send('room:join', 'my-room');
-  let msg = JSON.parse(send.mock.calls[0][0]) as WebSocketJoinMessage;
-  expect(msg.body).toEqual('my-room');
-  expect(msg.type).toEqual('room:join');
-  expect(msg.ver).toEqual(0);
+  await sendDone;
+  expect(JSON.parse(send.mock.calls[0][0])['type']).toEqual(
+    'guest:authenticate'
+  );
 
-  // Authenticate
-  ws.send('guest:authenticate', 'token');
-  msg = JSON.parse(send.mock.calls[1][0]) as WebSocketJoinMessage;
-  expect(msg.body).toEqual('token');
-  expect(msg.type).toEqual('guest:authenticate');
-  expect(msg.ver).toEqual(0);
-
-  // Cmd
-  ws.send('doc:cmd', {
-    args: ['lcreate', 'mylist'],
-    room: 'my-room',
-  });
-  msg = JSON.parse(send.mock.calls[2][0]) as WebSocketJoinMessage;
-  expect(msg.body).toEqual({
-    args: ['lcreate', 'mylist'],
-    room: 'my-room',
-  });
-  expect(msg.type).toEqual('doc:cmd');
-  expect(msg.ver).toEqual(0);
+  done();
 });
 
-test('websocket resets onmessage event', () => {
-  const oldOnmessage = () => {};
-  const conn = {
-    send: jest.fn(),
-    onmessage: oldOnmessage,
-  };
-  new SuperlumeWebSocket(conn);
-
-  expect(conn.onmessage).not.toEqual(oldOnmessage);
-});
-
-test('websocket can bind events', (done) => {
-  const conn: { send: any; onmessage: any } = {
-    send: jest.fn(),
-    onmessage: () => {},
-  };
-  const ws = new SuperlumeWebSocket(conn);
-
-  ws.bind('room:joined', (body) => {
-    expect(body).toBe('ok');
-    done();
+function awaitFnNTimes(n: number): [jest.Mock, Promise<any>] {
+  let resolve: any = null;
+  const p: Promise<any> = new Promise((res) => {
+    resolve = res;
   });
+  let count = 0;
 
-  conn.onmessage({
-    data: JSON.stringify({
-      type: 'room:joined',
-      ver: 0,
-      body: 'ok',
+  return [
+    jest.fn(() => {
+      count++;
+      if (count == n) {
+        resolve();
+      }
     }),
-  });
-});
+    p,
+  ];
+}

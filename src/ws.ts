@@ -8,20 +8,146 @@ import {
   WebSocketLeaveMessage,
   WebSocketJoinMessage,
 } from './wsMessages';
-import { WebSocketLikeConnection, Prop } from 'types';
-
+import {
+  WebSocketLikeConnection,
+  Prop,
+  DocumentCheckpoint,
+  Message,
+} from 'types';
+import { LocalSession } from './remote';
+import { delay } from './util';
+import { fetchDocument } from './remote';
 type Cb = (body: any) => void;
 
-export default class SuperlumeWebSocket {
-  private conn: WebSocketLikeConnection;
+const WEBSOCKET_TIMEOUT = 1000 * 2;
+
+const MAX_UNSENT_DOC_CMDS = 10_000;
+
+const FORWARDED_TYPES = ['doc:fwd', 'presence:fwd', 'room:rm_guest'];
+
+export class ReconnectingWebSocket implements SuperlumeSend {
+  private wsURL: string;
+  private docsURL: string;
+  private room: string;
+
+  private session: LocalSession;
+
+  private wsFactory: WebSocketFactory;
+  private documentFetch: DocumentFetch;
+
+  // Invariant: at most 1 of current/pendingConn are present
+  private currentConn?: WebSocketLikeConnection;
+  private pendingConn?: Promise<WebSocketLikeConnection>;
+
+  private dispatcher: WebsocketDispatch;
   private callbacks: { [key: string]: Array<Cb> } = {};
 
-  constructor(conn: WebSocketLikeConnection) {
-    this.conn = conn;
-    this.conn.onmessage = (ev) => {
+  constructor(params: {
+    dispatcher: WebsocketDispatch;
+    wsURL: string;
+    docsURL: string;
+    room: string;
+    session: LocalSession;
+    wsFactory?: WebSocketFactory;
+    documentFetch?: DocumentFetch;
+  }) {
+    this.dispatcher = params.dispatcher;
+    this.wsURL = params.wsURL;
+    this.docsURL = params.docsURL;
+    this.room = params.room;
+    this.session = params.session;
+    this.wsFactory = params.wsFactory || openWS;
+    this.documentFetch = params.documentFetch || fetchDocument;
+
+    this.wsLoop();
+  }
+
+  close() {
+    if (this.currentConn) {
+      this.currentConn.onmessage = null;
+      this.currentConn.onclose = null;
+      this.currentConn.close();
+      this.currentConn = undefined;
+    }
+
+    if (this.pendingConn) {
+      this.pendingConn = undefined;
+    }
+
+    this.dispatcher.startQueueingCmds();
+  }
+
+  //  one-off attempt to connect and authenticate
+  private async connectAndAuth(): Promise<WebSocketLikeConnection> {
+    const ws = await this.wsFactory(this.wsURL);
+    ws.onmessage = (ev) => {
       const msg = JSON.parse(ev.data) as WebSocketServerMessage;
       this.dispatch(msg.type, msg.body);
     };
+    ws.onclose = () => this.close();
+    return Promise.resolve(ws).then(async (ws) => {
+      ws.send(this.serializeMsg('guest:authenticate', this.session.token));
+      await this.once('guest:authenticated');
+
+      ws.send(this.serializeMsg('room:join', this.room));
+      await this.once('room:joined');
+
+      const { body } = await this.documentFetch(
+        this.docsURL,
+        this.session.token,
+        this.session.docID
+      );
+
+      this.dispatcher.bootstrap(body);
+
+      return ws;
+    });
+  }
+
+  //  main logic to obtain an active and auth'd connection
+  private async conn(): Promise<WebSocketLikeConnection> {
+    if (this.currentConn) {
+      return this.currentConn;
+    }
+
+    if (this.pendingConn) {
+      return this.pendingConn;
+    }
+
+    this.close();
+    this.pendingConn = (async () => {
+      let delayMs = 0;
+      let maxDelayMs = 60 * 1000;
+
+      while (true) {
+        const jitteredDelay = (delayMs * (Math.random() + 1)) / 2;
+        await delay(jitteredDelay);
+        delayMs = Math.min(2 * delayMs + 100, maxDelayMs);
+
+        try {
+          let ws = await this.connectAndAuth();
+          this.currentConn = ws;
+          this.pendingConn = undefined;
+          return ws;
+        } catch (err) {
+          console.error(
+            'Connection to RoomService failed with',
+            err,
+            '\nRetrying...'
+          );
+        }
+      }
+    })();
+
+    return this.pendingConn;
+  }
+
+  private async wsLoop() {
+    while (true) {
+      await this.conn();
+      this.processSendQueue();
+      await delay(1000);
+    }
   }
 
   private lastTime: number = 0;
@@ -38,14 +164,23 @@ export default class SuperlumeWebSocket {
     return `${time}:${this.msgsThisMilisecond}`;
   }
 
-  send(msgType: 'room:join', room: Prop<WebSocketJoinMessage, 'body'>): void;
-  send(msgType: 'guest:authenticate', token: string): void;
-  send(msgType: 'doc:cmd', body: Prop<WebSocketDocCmdMessage, 'body'>): void;
-  send(
+  serializeMsg(
+    msgType: 'room:join',
+    room: Prop<WebSocketJoinMessage, 'body'>
+  ): string;
+  serializeMsg(msgType: 'guest:authenticate', token: string): string;
+  serializeMsg(
+    msgType: 'doc:cmd',
+    body: Prop<WebSocketDocCmdMessage, 'body'>
+  ): string;
+  serializeMsg(
     msgType: 'presence:cmd',
     body: Prop<WebSocketPresenceCmdMessage, 'body'>
-  ): void;
-  send(msgType: Prop<WebSocketClientMessage, 'type'>, body: any): void {
+  ): string;
+  serializeMsg(
+    msgType: Prop<WebSocketClientMessage, 'type'>,
+    body: any
+  ): string {
     const ts = this.timestamp();
     const msg: WebSocketClientMessage = {
       type: msgType,
@@ -54,50 +189,170 @@ export default class SuperlumeWebSocket {
       body,
     };
 
-    // If the client is connecting, buffer a bit and retry
-    if (this.conn.readyState === this.conn.CONNECTING) {
-      setTimeout(() => {
-        // @ts-ignore
-        this.send(msgType, body);
-      }, 100 + Math.random() * 100);
+    return JSON.stringify(msg);
+  }
+
+  private docCmdSendQueue: Array<string> = [];
+
+  //  only most recent presence cmd per-key is kept
+  private presenceCmdSendQueue: Map<string, string> = new Map();
+
+  send(msgType: 'doc:cmd', body: Prop<WebSocketDocCmdMessage, 'body'>): void;
+  send(
+    msgType: 'presence:cmd',
+    body: Prop<WebSocketPresenceCmdMessage, 'body'>
+  ): void;
+  send(msgType: Prop<WebSocketClientMessage, 'type'>, body: any): void {
+    if (msgType == 'doc:cmd') {
+      if (this.docCmdSendQueue.length >= MAX_UNSENT_DOC_CMDS) {
+        throw 'RoomService send queue full';
+      }
+      const msg = this.serializeMsg(msgType, body);
+      this.docCmdSendQueue.push(msg);
+    }
+
+    if (msgType == 'presence:cmd') {
+      const msg = this.serializeMsg(msgType, body);
+      let presenceBody = body as Prop<WebSocketPresenceCmdMessage, 'body'>;
+      this.presenceCmdSendQueue.set(presenceBody.key, msg);
+    }
+
+    this.processSendQueue();
+  }
+
+  private processSendQueue() {
+    if (!this.currentConn) {
       return;
     }
 
-    this.conn.send(JSON.stringify(msg));
+    try {
+      while (this.presenceCmdSendQueue.size > 0) {
+        const first = this.presenceCmdSendQueue.entries().next();
+        if (first) {
+          const [key, msg] = first.value;
+          this.currentConn.send(msg);
+          this.presenceCmdSendQueue.delete(key);
+        }
+      }
+
+      while (this.docCmdSendQueue.length > 0) {
+        const msg = this.docCmdSendQueue[0];
+        this.currentConn.send(msg);
+        this.docCmdSendQueue.splice(0, 1);
+      }
+    } catch (e) {
+      console.error(e);
+    }
   }
 
-  bind(
+  private bind(
     msgType: 'room:rm_guest',
     callback: (body: Prop<WebSocketLeaveMessage, 'body'>) => void
   ): Cb;
-  bind(msgType: 'room:joined', callback: (body: string) => void): Cb;
-  bind(
+  private bind(msgType: 'room:joined', callback: (body: string) => void): Cb;
+  private bind(
     msgType: 'doc:fwd',
     callback: (body: Prop<WebSocketDocFwdMessage, 'body'>) => void
   ): Cb;
-  bind(
+  private bind(
     msgType: 'presence:fwd',
     callback: (body: Prop<WebSocketPresenceFwdMessage, 'body'>) => void
   ): Cb;
-  bind(msgType: 'guest:authenticated', callback: (body: string) => void): Cb;
-  bind(msgType: 'error', callback: (body: string) => void): Cb;
-  bind(msgType: Prop<WebSocketServerMessage, 'type'>, callback: Cb): Cb {
+  private bind(
+    msgType: 'guest:authenticated',
+    callback: (body: string) => void
+  ): Cb;
+  private bind(msgType: 'error', callback: (body: string) => void): Cb;
+  private bind(
+    msgType: Prop<WebSocketServerMessage, 'type'>,
+    callback: Cb
+  ): Cb {
     this.callbacks[msgType] = this.callbacks[msgType] || [];
     this.callbacks[msgType].push(callback);
     return callback;
   }
 
-  unbind(msgType: string, callback: Cb) {
+  private unbind(msgType: string, callback: Cb) {
     this.callbacks[msgType] = this.callbacks[msgType].filter(
       (c) => c !== callback
     );
   }
 
   private dispatch(msgType: string, body: any) {
+    if (msgType == 'error') {
+      console.error(body);
+    }
+
     const stack = this.callbacks[msgType];
-    if (!stack) return;
-    for (let i = 0; i < stack.length; i++) {
-      stack[i](body);
+    if (stack) {
+      for (let i = 0; i < stack.length; i++) {
+        stack[i](body);
+      }
+    }
+
+    if (FORWARDED_TYPES.includes(msgType)) {
+      this.dispatcher.forwardCmd(msgType, body);
     }
   }
+
+  private async once(msg: string) {
+    let off: (args: any) => any;
+    return Promise.race([
+      new Promise((_, reject) =>
+        setTimeout(() => reject('timeout'), WEBSOCKET_TIMEOUT)
+      ),
+      new Promise((resolve) => {
+        off = this.bind(msg as any, (body) => {
+          resolve(body);
+        });
+      }),
+    ]).then(() => {
+      if (off) this.unbind(msg, off);
+    });
+  }
 }
+
+export type ForwardedMessageBody =
+  | Prop<WebSocketDocFwdMessage, 'body'>
+  | Prop<WebSocketPresenceFwdMessage, 'body'>
+  | Prop<WebSocketLeaveMessage, 'body'>;
+
+export interface WebsocketDispatch {
+  forwardCmd(type: string, body: ForwardedMessageBody): void;
+  bootstrap(checkpoint: DocumentCheckpoint): void;
+  startQueueingCmds(): void;
+}
+
+async function openWS(url: string): Promise<WebSocket> {
+  return new Promise(function (resolve, reject) {
+    var ws = new WebSocket(url);
+    ws.onopen = function () {
+      resolve(ws);
+    };
+    ws.onerror = function (err) {
+      reject(err);
+    };
+  });
+}
+
+export interface SuperlumeSend {
+  send(msgType: 'doc:cmd', body: Prop<WebSocketDocCmdMessage, 'body'>): void;
+  send(
+    msgType: 'presence:cmd',
+    body: Prop<WebSocketPresenceCmdMessage, 'body'>
+  ): void;
+  send(msgType: Prop<WebSocketClientMessage, 'type'>, body: any): void;
+}
+
+export type WebSocketFactory = (url: string) => Promise<WebSocketTransport>;
+
+export type WebSocketTransport = Pick<
+  WebSocket,
+  'send' | 'onclose' | 'onmessage' | 'onerror' | 'close'
+>;
+
+export type DocumentFetch = (
+  url: string,
+  token: string,
+  docID: string
+) => Promise<Message<DocumentCheckpoint>>;

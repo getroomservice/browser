@@ -78,7 +78,7 @@ type RequireSome<T, K extends keyof T> = Partial<Omit<T, K>> &
 
 export type WebSocketLikeConnection = RequireSome<
   WebSocket,
-  'send' | 'onmessage'
+  'send' | 'onmessage' | 'close'
 >;
 
 export interface DocumentContext {

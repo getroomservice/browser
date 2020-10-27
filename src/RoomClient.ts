@@ -230,7 +230,7 @@ export class RoomClient {
         return;
       }
       // Ignore out of order version stamps
-      if (isOlderVS(body.vs, this.vs)) return;
+      if (isOlderVS(body.vs, this.checkpoint.vs)) return;
 
       // Ignore validated commands
       if (body.from === this.actor) return;

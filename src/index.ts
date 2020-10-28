@@ -1,4 +1,4 @@
-import { RoomService } from './RoomServiceClient';
+import { RoomService, RoomServiceParameters } from './RoomServiceClient';
 import {
   RoomClient,
   MapClient,
@@ -6,6 +6,13 @@ import {
   PresenceClient,
 } from './RoomClient';
 
-export { RoomService, RoomClient, MapClient, ListClient, PresenceClient };
+export {
+  RoomService,
+  RoomClient,
+  MapClient,
+  ListClient,
+  PresenceClient,
+  RoomServiceParameters,
+};
 
 export default RoomService;

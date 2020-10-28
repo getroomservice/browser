@@ -12,14 +12,20 @@ import { InnerMapClient } from './MapClient';
 import { InnerPresenceClient } from './PresenceClient';
 import invariant from 'tiny-invariant';
 import { isOlderVS } from './versionstamp';
-import { WebSocketServerMessage } from 'wsMessages';
+import { WebSocketDocCmdMessage, WebSocketDocFwdMessage, WebSocketPresenceFwdMessage, WebSocketServerMessage } from 'wsMessages';
 
 const WEBSOCKET_TIMEOUT = 1000 * 2;
 
 type Listener = {
-  event: Prop<WebSocketServerMessage, 'type'>;
+  event?: Prop<WebSocketServerMessage, 'type'>;
+  objID?: string;
   fn: (args: any) => void;
 };
+
+type Cb = (body: any) => void;
+
+const MAP_CMDS = ['mcreate', 'mput', 'mputref', 'mdel'];
+const LIST_CMDS = ['lcreate', 'lins', 'linsref', 'lput', 'lputref', 'ldel'];
 
 type ListenerBundle = Array<Listener>;
 
@@ -67,6 +73,139 @@ export class RoomClient {
     this.checkpoint = params.checkpoint;
     this.vs = this.checkpoint.vs;
     this.InnerPresenceClient = undefined;
+
+
+    this.ws.bind('doc:fwd', body => {
+      if (body.room !== this.roomID) return;
+      if (!body.args || body.args.length < 3) {
+        // Potentially a network failure, we don't want to crash,
+        // but do want to warn people
+        console.error('Unexpected command: ', body.args);
+        return;
+      }
+      // Ignore version stamps older than checkpoint
+      if (isOlderVS(body.vs, this.checkpoint.vs)) return;
+
+      // Ignore validated commands
+      if (body.from === this.actor) return;
+
+      const [cmd, docID, objID] = [body.args[0], body.args[1], body.args[2]];
+
+      if (docID !== this.docID) return;
+
+      if (cmd in MAP_CMDS) {
+        this.dispatchMapCmd(objID, body);
+      }
+
+      if (cmd in LIST_CMDS) {
+        this.dispatchListCmd(objID, body);
+      }
+
+    });
+
+    this.ws.bind('presence:fwd', body => {
+      this.dispatchPresenceCmd(body);
+    });
+
+    this.ws.bind('room:rm_guest', body => {
+      if (body.room !== this.roomID) return;
+      const client = this.presence() as InnerPresenceClient;
+      
+      const newClient = client.dangerouslyUpdateClientDirectly(
+        'room:rm_guest',
+        body
+      );
+      for (let [_, cbs] of Object.entries(this.presenceCallbacksByKey)) {
+        for (const cb of cbs) {
+          cb(newClient, body.guest)
+        }
+      }
+    });
+  }
+
+  private dispatchMapCmd(objID: string, body: Prop<WebSocketDocFwdMessage, 'body'>) {
+    if (!this.mapClients[objID]) {
+      const m = new InnerMapClient<any>(
+        this.checkpoint.maps[objID] || {},
+        this.roomID,
+        this.docID,
+        name,
+        this.ws
+      );
+      this.mapClients[objID] = m;
+    }
+
+    const client = this.mapClients[objID];
+    const updatedClient = client.dangerouslyUpdateClientDirectly(body.args);
+
+    for (const cb of this.mapCallbacksByObjID[objID]){
+      cb(updatedClient, body.from);
+    }
+  }
+
+  private dispatchListCmd(objID: string, body: Prop<WebSocketDocFwdMessage, 'body'>) {
+    if (!this.listClients[objID]) {
+      const l = new InnerListClient<any>(
+        this.checkpoint,
+        this.roomID,
+        this.docID,
+        name,
+        this.ws,
+        this.actor
+      );
+      this.listClients[objID] = l;
+    }
+
+    const client = this.listClients[objID];
+    const updatedClient = client.dangerouslyUpdateClientDirectly(body.args);
+
+    for (const cb of this.listCallbacksByObjID[objID]){
+      cb(updatedClient, body.from);
+    }
+  }
+
+  private dispatchPresenceCmd(body: Prop<WebSocketPresenceFwdMessage, 'body'>) {
+    if (body.room !== this.roomID) return;
+    if (body.from === this.actor) return;
+
+    const client = this.presence() as InnerPresenceClient;
+    const key = body.key;
+
+    const now = new Date().getTime() / 1000;
+    const secondsTillTimeout = body.expAt - now;
+    if (secondsTillTimeout < 0) {
+      // don't show expired stuff
+      return;
+    }
+
+    // Expire stuff if it's within a reasonable range (12h)
+    if (secondsTillTimeout < 60 * 60 * 12) {
+      if (this.expires[key]) {
+        clearTimeout(this.expires[key]);
+      }
+
+      let timeout = setTimeout(() => {
+        const newClient = client.dangerouslyUpdateClientDirectly(
+          'presence:expire',
+          { key: body.key }
+        );
+        if (!newClient) return;
+        for (const cb of this.presenceCallbacksByKey[key] ?? []) {
+          cb(newClient, body.from)
+        }
+      }, secondsTillTimeout * 1000);
+
+      this.expires[key] = timeout;
+    }
+
+    const newClient = client.dangerouslyUpdateClientDirectly(
+      'presence:fwd',
+      body
+    );
+    if (!newClient) return;
+    for (const cb of this.presenceCallbacksByKey[key] ?? []) {
+      cb(newClient, body.from)
+    }
   }
 
   private async once(msg: string) {
@@ -189,6 +328,10 @@ export class RoomClient {
     return this.InnerPresenceClient;
   }
 
+  private mapCallbacksByObjID: { [key: string]: Array<Function> } = {};
+  private listCallbacksByObjID: { [key: string]: Array<Function> } = {};
+  private presenceCallbacksByKey: { [key: string]: Array<Function> } = {};
+
   subscribe<T>(
     list: ListClient<T>,
     onChangeFn: (list: ListClient<T>) => any
@@ -220,35 +363,30 @@ export class RoomClient {
       return this.subscribePresence<T>(obj, onChangeFnOrString, onChangeFn);
     }
 
-    // Map and list handler
-    const bound = this.ws.bind('doc:fwd', body => {
-      if (body.room !== this.roomID) return;
-      if (!body.args || body.args.length < 3) {
-        // Potentially a network failure, we don't want to crash,
-        // but do want to warn people
-        console.error('Unexpected command: ', body.args);
-        return;
-      }
-      // Ignore out of order version stamps
-      if (isOlderVS(body.vs, this.checkpoint.vs)) return;
+    //  create new closure so fns can be subscribed/unsubscribed multiple times
+    const cb = (obj: any, from: string) => {
+      onChangeFnOrString(obj, from);
+    };
 
-      // Ignore validated commands
-      if (body.from === this.actor) return;
+    let objID;
+    if (obj instanceof InnerMapClient) {
+      const client = obj as InnerMapClient<any>;
+      objID = client.id;
+      this.mapCallbacksByObjID[objID] ||= [];
+      this.mapCallbacksByObjID[objID].push(cb);
+    }
 
-      const [docID, objID] = [body.args[1], body.args[2]];
-      if (docID !== this.docID) return;
-      if (objID !== (obj as ObjectClient).id) return;
+    if (obj instanceof InnerListClient) {
+      const client = obj as InnerListClient<any>;
+      objID = client.id;
+      this.listCallbacksByObjID[objID] ||= [];
+      this.listCallbacksByObjID[objID].push(cb);
+    }
 
-      this.vs = body.vs;
-      const newObj = (obj as ObjectClient).dangerouslyUpdateClientDirectly(
-        body.args
-      );
-      onChangeFnOrString(newObj, body.from);
-    });
     return [
       {
-        event: 'doc:fwd',
-        fn: bound,
+        objID,
+        fn: cb as (args: any) => void,
       },
     ];
   }
@@ -263,71 +401,35 @@ export class RoomClient {
       'subscribe() expects the first argument to not be undefined.'
     );
 
-    const fwdListener = this.ws.bind('presence:fwd', body => {
-      if (body.room !== this.roomID) return;
-      if (body.key !== key) return;
-      if (body.from === this.actor) return;
-
-      const now = new Date().getTime() / 1000;
-      const secondsTillTimeout = body.expAt - now;
-      if (secondsTillTimeout < 0) {
-        // don't show expired stuff
-        return;
-      }
-
-      // Expire stuff if it's within a reasonable range (12h)
-      if (secondsTillTimeout < 60 * 60 * 12) {
-        if (this.expires[key]) {
-          clearTimeout(this.expires[key]);
+      //  create new closure so fns can be subscribed/unsubscribed multiple times
+      const cb = (obj: any, from: string) => {
+        if (onChangeFn) {
+          onChangeFn(obj, from);
         }
+      };
 
-        let timeout = setTimeout(() => {
-          const newObj = (obj as InnerPresenceClient).dangerouslyUpdateClientDirectly(
-            'presence:expire',
-            { key: body.key }
-          );
-          if (!newObj) return;
-          invariant(onChangeFn);
-          onChangeFn(newObj, body.from);
-        }, secondsTillTimeout * 1000);
-
-        this.expires[key] = timeout;
-      }
-
-      const newObj = (obj as InnerPresenceClient).dangerouslyUpdateClientDirectly(
-        'presence:fwd',
-        body
-      );
-      if (!newObj) return;
-      invariant(onChangeFn);
-      onChangeFn(newObj, body.from);
-    });
-    const leaveListener = this.ws.bind('room:rm_guest', body => {
-      if (body.room !== this.roomID) return;
-      const newObj = (obj as InnerPresenceClient).dangerouslyUpdateClientDirectly(
-        'room:rm_guest',
-        body
-      );
-      if (!newObj) return;
-      invariant(onChangeFn);
-      onChangeFn(newObj, body.guest);
-    });
+      this.presenceCallbacksByKey[key] ||= [];
+      this.presenceCallbacksByKey[key].push(cb);
 
     return [
       {
-        event: 'presence:fwd',
-        fn: fwdListener,
-      },
-      {
-        event: 'room:rm_guest',
-        fn: leaveListener,
+        objID: key,
+        fn: cb as (args: any) => void,
       },
     ];
   }
 
+
   unsubscribe(listeners: ListenerBundle) {
     for (let l of listeners) {
-      this.ws.unbind(l.event, l.fn);
+      if (l.objID) {
+        this.mapCallbacksByObjID[l.objID] = removeCallback(this.mapCallbacksByObjID[l.objID], l.fn);
+        this.listCallbacksByObjID[l.objID] = removeCallback(this.listCallbacksByObjID[l.objID], l.fn);
+        this.presenceCallbacksByKey[l.objID] = removeCallback(this.presenceCallbacksByKey[l.objID], l.fn);
+      }
+      if (l.event) {
+        this.ws.unbind(l.event, l.fn);
+      }
     }
   }
 }
@@ -351,4 +453,13 @@ export async function createRoom(
   await roomClient.reconnect();
 
   return roomClient;
+}
+
+function removeCallback(cbs: Array<Function> | undefined, rmCb: Function) : Array<Function> {
+  if (!cbs) {
+    return [];
+  }
+  return cbs.filter((existingCb) => {
+    return existingCb !== rmCb;
+  });
 }

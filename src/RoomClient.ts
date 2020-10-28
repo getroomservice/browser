@@ -2,7 +2,6 @@ import SuperlumeWebSocket from './ws';
 import {
   WebSocketLikeConnection,
   DocumentCheckpoint,
-  ObjectClient,
   AuthStrategy,
   Prop,
 } from './types';
@@ -12,7 +11,7 @@ import { InnerMapClient } from './MapClient';
 import { InnerPresenceClient } from './PresenceClient';
 import invariant from 'tiny-invariant';
 import { isOlderVS } from './versionstamp';
-import { WebSocketDocCmdMessage, WebSocketDocFwdMessage, WebSocketPresenceFwdMessage, WebSocketServerMessage } from 'wsMessages';
+import { WebSocketDocFwdMessage, WebSocketPresenceFwdMessage, WebSocketServerMessage } from 'wsMessages';
 
 const WEBSOCKET_TIMEOUT = 1000 * 2;
 
@@ -22,7 +21,6 @@ type Listener = {
   fn: (args: any) => void;
 };
 
-type Cb = (body: any) => void;
 
 const MAP_CMDS = ['mcreate', 'mput', 'mputref', 'mdel'];
 const LIST_CMDS = ['lcreate', 'lins', 'linsref', 'lput', 'lputref', 'ldel'];
@@ -45,7 +43,6 @@ export type PresenceClient = Omit<
 
 export class RoomClient {
   private ws: SuperlumeWebSocket;
-  private vs: string;
   private token: string;
   private roomID: string;
   private docID: string;
@@ -71,7 +68,6 @@ export class RoomClient {
     this.docID = params.checkpoint.id;
     this.actor = params.actor;
     this.checkpoint = params.checkpoint;
-    this.vs = this.checkpoint.vs;
     this.InnerPresenceClient = undefined;
 
 
@@ -372,14 +368,14 @@ export class RoomClient {
     if (obj instanceof InnerMapClient) {
       const client = obj as InnerMapClient<any>;
       objID = client.id;
-      this.mapCallbacksByObjID[objID] ||= [];
+      this.mapCallbacksByObjID[objID] = this.mapCallbacksByObjID[objID] || [];
       this.mapCallbacksByObjID[objID].push(cb);
     }
 
     if (obj instanceof InnerListClient) {
       const client = obj as InnerListClient<any>;
       objID = client.id;
-      this.listCallbacksByObjID[objID] ||= [];
+      this.listCallbacksByObjID[objID] = this.listCallbacksByObjID[objID] || [];
       this.listCallbacksByObjID[objID].push(cb);
     }
 
@@ -408,7 +404,7 @@ export class RoomClient {
         }
       };
 
-      this.presenceCallbacksByKey[key] ||= [];
+      this.presenceCallbacksByKey[key] = this.presenceCallbacksByKey[key] || [];
       this.presenceCallbacksByKey[key].push(cb);
 
     return [

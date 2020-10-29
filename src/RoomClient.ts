@@ -70,7 +70,6 @@ export class RoomClient {
     this.checkpoint = params.checkpoint;
     this.InnerPresenceClient = undefined;
 
-
     this.ws.bind('doc:fwd', body => {
       if (body.room !== this.roomID) return;
       if (!body.args || body.args.length < 3) {

@@ -88,12 +88,12 @@ export class RoomClient {
 
       if (docID !== this.docID) return;
 
-      if (cmd in MAP_CMDS) {
+      if (MAP_CMDS.includes(cmd)) {
         this.dispatchMapCmd(objID, body);
-      }
-
-      if (cmd in LIST_CMDS) {
+      } else if (LIST_CMDS.includes(cmd)) {
         this.dispatchListCmd(objID, body);
+      } else {
+        console.warn("Unhandled Room Service doc:fwd command: " + cmd + ". Consider updating the Room Service client.");
       }
 
     });
@@ -124,7 +124,7 @@ export class RoomClient {
         this.checkpoint.maps[objID] || {},
         this.roomID,
         this.docID,
-        name,
+        objID,
         this.ws
       );
       this.mapClients[objID] = m;
@@ -133,7 +133,7 @@ export class RoomClient {
     const client = this.mapClients[objID];
     const updatedClient = client.dangerouslyUpdateClientDirectly(body.args);
 
-    for (const cb of this.mapCallbacksByObjID[objID]){
+    for (const cb of (this.mapCallbacksByObjID[objID] || [])){
       cb(updatedClient, body.from);
     }
   }
@@ -144,7 +144,7 @@ export class RoomClient {
         this.checkpoint,
         this.roomID,
         this.docID,
-        name,
+        objID,
         this.ws,
         this.actor
       );
@@ -154,7 +154,7 @@ export class RoomClient {
     const client = this.listClients[objID];
     const updatedClient = client.dangerouslyUpdateClientDirectly(body.args);
 
-    for (const cb of this.listCallbacksByObjID[objID]){
+    for (const cb of (this.listCallbacksByObjID[objID] || [])){
       cb(updatedClient, body.from);
     }
   }

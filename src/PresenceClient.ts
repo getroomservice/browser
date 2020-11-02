@@ -55,6 +55,10 @@ export class InnerPresenceClient {
     for (let actor in this.cache[key]) {
       const obj = this.cache[key][actor];
 
+      if (actor === this.actor) {
+        delete this.cache[key][actor];
+      }
+
       if (new Date() > obj.expAt) {
         delete this.cache[key][actor];
         continue;

@@ -11,7 +11,11 @@ import { InnerMapClient } from './MapClient';
 import { InnerPresenceClient } from './PresenceClient';
 import invariant from 'tiny-invariant';
 import { isOlderVS } from './versionstamp';
-import { WebSocketDocFwdMessage, WebSocketPresenceFwdMessage, WebSocketServerMessage } from 'wsMessages';
+import {
+  WebSocketDocFwdMessage,
+  WebSocketPresenceFwdMessage,
+  WebSocketServerMessage,
+} from './wsMessages';
 
 const WEBSOCKET_TIMEOUT = 1000 * 2;
 
@@ -20,7 +24,6 @@ type Listener = {
   objID?: string;
   fn: (args: any) => void;
 };
-
 
 const MAP_CMDS = ['mcreate', 'mput', 'mputref', 'mdel'];
 const LIST_CMDS = ['lcreate', 'lins', 'linsref', 'lput', 'lputref', 'ldel'];
@@ -93,9 +96,12 @@ export class RoomClient {
       } else if (LIST_CMDS.includes(cmd)) {
         this.dispatchListCmd(objID, body);
       } else {
-        console.warn("Unhandled Room Service doc:fwd command: " + cmd + ". Consider updating the Room Service client.");
+        console.warn(
+          'Unhandled Room Service doc:fwd command: ' +
+            cmd +
+            '. Consider updating the Room Service client.'
+        );
       }
-
     });
 
     this.ws.bind('presence:fwd', body => {
@@ -105,20 +111,23 @@ export class RoomClient {
     this.ws.bind('room:rm_guest', body => {
       if (body.room !== this.roomID) return;
       const client = this.presence() as InnerPresenceClient;
-      
+
       const newClient = client.dangerouslyUpdateClientDirectly(
         'room:rm_guest',
         body
       );
       for (let [_, cbs] of Object.entries(this.presenceCallbacksByKey)) {
         for (const cb of cbs) {
-          cb(newClient, body.guest)
+          cb(newClient, body.guest);
         }
       }
     });
   }
 
-  private dispatchMapCmd(objID: string, body: Prop<WebSocketDocFwdMessage, 'body'>) {
+  private dispatchMapCmd(
+    objID: string,
+    body: Prop<WebSocketDocFwdMessage, 'body'>
+  ) {
     if (!this.mapClients[objID]) {
       const m = new InnerMapClient<any>(
         this.checkpoint.maps[objID] || {},
@@ -133,12 +142,15 @@ export class RoomClient {
     const client = this.mapClients[objID];
     const updatedClient = client.dangerouslyUpdateClientDirectly(body.args);
 
-    for (const cb of (this.mapCallbacksByObjID[objID] || [])){
+    for (const cb of this.mapCallbacksByObjID[objID] || []) {
       cb(updatedClient, body.from);
     }
   }
 
-  private dispatchListCmd(objID: string, body: Prop<WebSocketDocFwdMessage, 'body'>) {
+  private dispatchListCmd(
+    objID: string,
+    body: Prop<WebSocketDocFwdMessage, 'body'>
+  ) {
     if (!this.listClients[objID]) {
       const l = new InnerListClient<any>(
         this.checkpoint,
@@ -154,7 +166,7 @@ export class RoomClient {
     const client = this.listClients[objID];
     const updatedClient = client.dangerouslyUpdateClientDirectly(body.args);
 
-    for (const cb of (this.listCallbacksByObjID[objID] || [])){
+    for (const cb of this.listCallbacksByObjID[objID] || []) {
       cb(updatedClient, body.from);
     }
   }
@@ -186,7 +198,7 @@ export class RoomClient {
         );
         if (!newClient) return;
         for (const cb of this.presenceCallbacksByKey[key] ?? []) {
-          cb(newClient, body.from)
+          cb(newClient, body.from);
         }
       }, secondsTillTimeout * 1000);
 
@@ -199,7 +211,7 @@ export class RoomClient {
     );
     if (!newClient) return;
     for (const cb of this.presenceCallbacksByKey[key] ?? []) {
-      cb(newClient, body.from)
+      cb(newClient, body.from);
     }
   }
 
@@ -396,15 +408,15 @@ export class RoomClient {
       'subscribe() expects the first argument to not be undefined.'
     );
 
-      //  create new closure so fns can be subscribed/unsubscribed multiple times
-      const cb = (obj: any, from: string) => {
-        if (onChangeFn) {
-          onChangeFn(obj, from);
-        }
-      };
+    //  create new closure so fns can be subscribed/unsubscribed multiple times
+    const cb = (obj: any, from: string) => {
+      if (onChangeFn) {
+        onChangeFn(obj, from);
+      }
+    };
 
-      this.presenceCallbacksByKey[key] = this.presenceCallbacksByKey[key] || [];
-      this.presenceCallbacksByKey[key].push(cb);
+    this.presenceCallbacksByKey[key] = this.presenceCallbacksByKey[key] || [];
+    this.presenceCallbacksByKey[key].push(cb);
 
     return [
       {
@@ -414,13 +426,21 @@ export class RoomClient {
     ];
   }
 
-
   unsubscribe(listeners: ListenerBundle) {
     for (let l of listeners) {
       if (l.objID) {
-        this.mapCallbacksByObjID[l.objID] = removeCallback(this.mapCallbacksByObjID[l.objID], l.fn);
-        this.listCallbacksByObjID[l.objID] = removeCallback(this.listCallbacksByObjID[l.objID], l.fn);
-        this.presenceCallbacksByKey[l.objID] = removeCallback(this.presenceCallbacksByKey[l.objID], l.fn);
+        this.mapCallbacksByObjID[l.objID] = removeCallback(
+          this.mapCallbacksByObjID[l.objID],
+          l.fn
+        );
+        this.listCallbacksByObjID[l.objID] = removeCallback(
+          this.listCallbacksByObjID[l.objID],
+          l.fn
+        );
+        this.presenceCallbacksByKey[l.objID] = removeCallback(
+          this.presenceCallbacksByKey[l.objID],
+          l.fn
+        );
       }
       if (l.event) {
         this.ws.unbind(l.event, l.fn);
@@ -450,11 +470,14 @@ export async function createRoom(
   return roomClient;
 }
 
-function removeCallback(cbs: Array<Function> | undefined, rmCb: Function) : Array<Function> {
+function removeCallback(
+  cbs: Array<Function> | undefined,
+  rmCb: Function
+): Array<Function> {
   if (!cbs) {
     return [];
   }
-  return cbs.filter((existingCb) => {
+  return cbs.filter(existingCb => {
     return existingCb !== rmCb;
   });
 }

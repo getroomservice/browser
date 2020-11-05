@@ -16,16 +16,16 @@ export class InnerPresenceClient {
   private cache: { [key: string]: PresenceCheckpoint<any> };
   private sendPres: (key: string, args: any) => any;
 
-  constructor(
-    roomID: string,
-    ws: SuperlumeWebSocket,
-    actor: string,
-    token: string
-  ) {
-    this.roomID = roomID;
-    this.ws = ws;
-    this.actor = actor;
-    this.token = token;
+  constructor(props: {
+    roomID: string;
+    ws: SuperlumeWebSocket;
+    actor: string;
+    token: string;
+  }) {
+    this.roomID = props.roomID;
+    this.ws = props.ws;
+    this.actor = props.actor;
+    this.token = props.token;
     this.cache = {};
 
     const sendPres = (_: string, args: any) => {

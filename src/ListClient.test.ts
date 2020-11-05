@@ -29,14 +29,14 @@ describe('list clients', () => {
   });
 
   test("List clients don't include extra quotes", () => {
-    const alpha = new InnerListClient(
+    const alpha = new InnerListClient({
       checkpoint,
       roomID,
       docID,
       listID,
       ws,
-      'alpha'
-    );
+      actor: 'alpha',
+    });
 
     const finishedAlpha = alpha
       .push('"1"')
@@ -48,14 +48,14 @@ describe('list clients', () => {
   });
 
   test('list clients can map over items', () => {
-    const alpha = new InnerListClient(
+    const alpha = new InnerListClient({
       checkpoint,
       roomID,
       docID,
       listID,
       ws,
-      'alpha'
-    );
+      actor: 'alpha',
+    });
 
     const finished = alpha
       .push(1)
@@ -72,14 +72,14 @@ describe('list clients', () => {
   });
 
   test('list.push supports varags', () => {
-    const alpha = new InnerListClient(
+    const alpha = new InnerListClient({
       checkpoint,
       roomID,
       docID,
       listID,
       ws,
-      'alpha'
-    );
+      actor: 'alpha',
+    });
 
     const finished = alpha.push(1, 2, 'foo');
     expect(finished.toArray()).toEqual([1, 2, 'foo']);
@@ -93,14 +93,14 @@ describe('list clients', () => {
       readyState: WebSocket.OPEN,
     });
 
-    const alpha = new InnerListClient(
-      checkpoint,
-      roomID,
+    const alpha = new InnerListClient({
+      checkpoint: checkpoint,
+      roomID: roomID,
       docID,
       listID,
       ws,
-      'alpha'
-    );
+      actor: 'alpha',
+    });
     alpha.push('cats');
 
     const msg = JSON.parse(send.mock.calls[0][0]) as any;
@@ -121,14 +121,14 @@ describe('list clients', () => {
       send,
     });
 
-    let alpha = new InnerListClient(
+    let alpha = new InnerListClient({
       checkpoint,
       roomID,
       docID,
       listID,
       ws,
-      'alpha'
-    );
+      actor: 'alpha',
+    });
     alpha = alpha.push('cats');
     alpha = alpha.dangerouslyUpdateClientDirectly([
       'lins',
@@ -180,14 +180,14 @@ describe('list clients', () => {
       send,
     });
 
-    let alpha = new InnerListClient(
-      fixture.body,
+    let alpha = new InnerListClient({
+      checkpoint: fixture.body,
       roomID,
-      fixture.body.id,
-      'todo',
+      docID: fixture.body.id,
+      listID: 'todo',
       ws,
-      'gst_b355e9c9-f1d3-4233-a6c5-e75e1cd0e52c'
-    );
+      actor: 'gst_b355e9c9-f1d3-4233-a6c5-e75e1cd0e52c',
+    });
 
     // Sanity check our import is correct
     expect(alpha.toArray()).toEqual(['okay', 'alright cool', 'left', 'right']);

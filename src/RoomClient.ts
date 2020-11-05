@@ -129,13 +129,13 @@ export class RoomClient {
     body: Prop<WebSocketDocFwdMessage, 'body'>
   ) {
     if (!this.mapClients[objID]) {
-      const m = new InnerMapClient<any>(
-        this.checkpoint.maps[objID] || {},
-        this.roomID,
-        this.docID,
-        objID,
-        this.ws
-      );
+      const m = new InnerMapClient<any>({
+        checkpoint: this.checkpoint.maps[objID] || {},
+        roomID: this.roomID,
+        docID: this.docID,
+        mapID: objID,
+        ws: this.ws,
+      });
       this.mapClients[objID] = m;
     }
 
@@ -152,14 +152,14 @@ export class RoomClient {
     body: Prop<WebSocketDocFwdMessage, 'body'>
   ) {
     if (!this.listClients[objID]) {
-      const l = new InnerListClient<any>(
-        this.checkpoint,
-        this.roomID,
-        this.docID,
-        objID,
-        this.ws,
-        this.actor
-      );
+      const l = new InnerListClient<any>({
+        checkpoint: this.checkpoint,
+        roomID: this.roomID,
+        docID: this.docID,
+        listID: objID,
+        ws: this.ws,
+        actor: this.actor,
+      });
       this.listClients[objID] = l;
     }
 
@@ -277,14 +277,14 @@ export class RoomClient {
       };
     }
 
-    const l = new InnerListClient<T>(
-      this.checkpoint,
-      this.roomID,
-      this.docID,
-      name,
-      this.ws,
-      this.actor
-    );
+    const l = new InnerListClient<T>({
+      checkpoint: this.checkpoint,
+      roomID: this.roomID,
+      docID: this.docID,
+      listID: name,
+      ws: this.ws,
+      actor: this.actor,
+    });
     this.listClients[name] = l;
 
     return l;
@@ -303,13 +303,13 @@ export class RoomClient {
       });
     }
 
-    const m = new InnerMapClient<T>(
-      this.checkpoint.maps[name] || {},
-      this.roomID,
-      this.docID,
-      name,
-      this.ws
-    );
+    const m = new InnerMapClient<T>({
+      checkpoint: this.checkpoint.maps[name] || {},
+      roomID: this.roomID,
+      docID: this.docID,
+      mapID: name,
+      ws: this.ws,
+    });
     this.mapClients[name] = m;
 
     return m;
@@ -319,12 +319,12 @@ export class RoomClient {
     if (this.InnerPresenceClient) {
       return this.InnerPresenceClient;
     }
-    const p = new InnerPresenceClient(
-      this.roomID,
-      this.ws,
-      this.actor,
-      this.token
-    );
+    const p = new InnerPresenceClient({
+      roomID: this.roomID,
+      ws: this.ws,
+      actor: this.actor,
+      token: this.token,
+    });
     try {
       this.InnerPresenceClient = p;
     } catch (err) {

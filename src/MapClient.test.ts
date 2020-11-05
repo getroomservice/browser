@@ -10,7 +10,13 @@ describe('InnerMapClient', () => {
     readyState: WebSocket.OPEN,
   });
 
-  const map = new InnerMapClient({}, 'room', 'doc', 'map', ws);
+  const map = new InnerMapClient({
+    checkpoint: {},
+    roomID: 'room',
+    docID: 'doc',
+    mapID: 'map',
+    ws,
+  });
 
   test('has the correct id', () => {
     expect(map.id).toEqual('map');

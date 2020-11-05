@@ -34,11 +34,11 @@ export default function Presence() {
       const p = room.presence();
       setRoom(room as any);
 
-      room.subscribe(p, 'first', val => {
+      room.subscribe(p, 'first', (val) => {
         setFirst(val);
       });
 
-      room.subscribe(p, 'second', val => {
+      room.subscribe(p, 'second', (val) => {
         setSecond(val);
       });
     }

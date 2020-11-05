@@ -223,6 +223,6 @@ export default class ReverseTree {
   }
 
   toArray(): Array<any> {
-    return this.postOrderTraverse().map(c => c.value);
+    return this.postOrderTraverse().map((c) => c.value);
   }
 }

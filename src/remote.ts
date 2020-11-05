@@ -78,8 +78,8 @@ export async function fetchSession(
       throw new Error(`The auth function must return a 'user' key.`);
     }
 
-    const docID = result.resources.find(r => r.object === 'document')!.id;
-    const roomID = result.resources.find(r => r.object === 'room')!.id;
+    const docID = result.resources.find((r) => r.object === 'document')!.id;
+    const roomID = result.resources.find((r) => r.object === 'room')!.id;
 
     return {
       token: result.token,
@@ -135,8 +135,8 @@ export async function fetchSession(
     );
   }
 
-  const docID = resources.find(r => r.object === 'document')!.id;
-  const roomID = resources.find(r => r.object === 'room')!.id;
+  const docID = resources.find((r) => r.object === 'document')!.id;
+  const roomID = resources.find((r) => r.object === 'room')!.id;
 
   return {
     token,

@@ -50,14 +50,14 @@ test('websocket resets onmessage event', () => {
   expect(conn.onmessage).not.toEqual(oldOnmessage);
 });
 
-test('websocket can bind events', done => {
+test('websocket can bind events', (done) => {
   const conn: { send: any; onmessage: any } = {
     send: jest.fn(),
     onmessage: () => {},
   };
   const ws = new SuperlumeWebSocket(conn);
 
-  ws.bind('room:joined', body => {
+  ws.bind('room:joined', (body) => {
     expect(body).toBe('ok');
     done();
   });

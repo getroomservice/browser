@@ -12,7 +12,8 @@
     "build": "tsdx build",
     "test": "tsdx test",
     "lint": "tsdx lint",
-    "prepare": "tsdx build"
+    "prepare": "tsdx build",
+    "fmt": "prettier -w ."
   },
   "peerDependencies": {},
   "prettier": {
@@ -32,6 +33,7 @@
     "@types/socket.io-client": "^1.4.32",
     "@types/uuid": "^3.4.6",
     "jest": "^24.9.0",
+    "prettier": "^2.1.2",
     "ts-jest": "^24.2.0",
     "tsdx": "^0.12.3",
     "tslib": "^1.11.1",

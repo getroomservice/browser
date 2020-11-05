@@ -16,7 +16,7 @@ function useList(
       const l = await room.list(listName);
       setList(l);
 
-      room.subscribe(l, li => {
+      room.subscribe(l, (li) => {
         setList(li);
       });
     }
@@ -47,8 +47,8 @@ export default function List() {
       <input
         type="text"
         value={text}
-        onChange={e => setText(e.target.value)}
-        onKeyPress={e => {
+        onChange={(e) => setText(e.target.value)}
+        onKeyPress={(e) => {
           if (e.key === 'Enter') {
             onEnterPress();
           }

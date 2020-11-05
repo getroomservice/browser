@@ -10,22 +10,22 @@ export class InnerMapClient<T extends any> implements ObjectClient {
 
   id: string;
 
-  constructor(
-    checkpoint: MapCheckpoint,
-    roomID: string,
-    docID: string,
-    mapID: string,
-    ws: SuperlumeWebSocket
-  ) {
-    this.roomID = roomID;
-    this.docID = docID;
-    this.id = mapID;
-    this.ws = ws;
+  constructor(props: {
+    checkpoint: MapCheckpoint;
+    roomID: string;
+    docID: string;
+    mapID: string;
+    ws: SuperlumeWebSocket;
+  }) {
+    this.roomID = props.roomID;
+    this.docID = props.docID;
+    this.id = props.mapID;
+    this.ws = props.ws;
     this.store = {};
 
     // import
-    for (let k in checkpoint) {
-      const val = checkpoint[k];
+    for (let k in props.checkpoint) {
+      const val = props.checkpoint[k];
       if (typeof val === 'string') {
         this.store[k] = unescape(val);
       }

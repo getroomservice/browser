@@ -16,34 +16,34 @@ export class InnerListClient<T extends any> implements ObjectClient {
 
   id: string;
 
-  constructor(
-    checkpoint: DocumentCheckpoint,
-    roomID: string,
-    docID: string,
-    listID: string,
-    ws: SuperlumeWebSocket,
-    actor: string
-  ) {
-    this.roomID = roomID;
-    this.docID = docID;
-    this.id = listID;
-    this.ws = ws;
-    this.rt = new ReverseTree(actor);
+  constructor(props: {
+    checkpoint: DocumentCheckpoint;
+    roomID: string;
+    docID: string;
+    listID: string;
+    ws: SuperlumeWebSocket;
+    actor: string;
+  }) {
+    this.roomID = props.roomID;
+    this.docID = props.docID;
+    this.id = props.listID;
+    this.ws = props.ws;
+    this.rt = new ReverseTree(props.actor);
 
     invariant(
-      checkpoint.lists[listID],
-      `Unknown listid '${listID}' in checkpoint.`
+      props.checkpoint.lists[props.listID],
+      `Unknown listid '${props.listID}' in checkpoint.`
     );
 
-    this.rt.import(checkpoint, listID);
-    const list = checkpoint.lists[listID];
+    this.rt.import(props.checkpoint, props.listID);
+    const list = props.checkpoint.lists[props.listID];
     const ids = list.ids || [];
     for (let i = 0; i < ids.length; i++) {
-      const val = checkpoint.lists[listID].values[i];
+      const val = props.checkpoint.lists[props.listID].values[i];
       if (typeof val === 'object' && val['t'] === '') {
         continue; // skip tombstones
       }
-      this.itemIDs.push(unescapeID(checkpoint, ids[i]));
+      this.itemIDs.push(unescapeID(props.checkpoint, ids[i]));
     }
   }
 

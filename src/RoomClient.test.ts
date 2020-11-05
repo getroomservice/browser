@@ -14,7 +14,7 @@ const cp: DocumentCheckpoint = {
   },
 };
 
-test('RoomClient.connect() will send authenticate and connect messages', done => {
+test('RoomClient.connect() will send authenticate and connect messages', (done) => {
   const conn = {
     onmessage: (_?: MessageEvent) => {},
     send: (_?: any) => {},

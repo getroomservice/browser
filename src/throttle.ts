@@ -7,7 +7,7 @@ export function throttleByFirstArgument<T extends Function>(
   let timeouts = {} as any;
   let initialCall = true;
 
-  return function() {
+  return function () {
     const callNow = immediate && initialCall;
     const next = () => {
       // @ts-ignore

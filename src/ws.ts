@@ -18,7 +18,7 @@ export default class SuperlumeWebSocket {
 
   constructor(conn: WebSocketLikeConnection) {
     this.conn = conn;
-    this.conn.onmessage = ev => {
+    this.conn.onmessage = (ev) => {
       const msg = JSON.parse(ev.data) as WebSocketServerMessage;
       this.dispatch(msg.type, msg.body);
     };
@@ -89,7 +89,7 @@ export default class SuperlumeWebSocket {
 
   unbind(msgType: string, callback: Cb) {
     this.callbacks[msgType] = this.callbacks[msgType].filter(
-      c => c !== callback
+      (c) => c !== callback
     );
   }
 

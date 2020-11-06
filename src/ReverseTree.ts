@@ -159,7 +159,6 @@ export default class ReverseTree {
         return node;
       }
 
-      //
       return right(t, children[children.length - 1]);
     }
 

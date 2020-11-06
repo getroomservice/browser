@@ -170,8 +170,18 @@ export default class ReverseTree {
     // -- Convert the log into a regular tree
     const tree = this.toTree();
 
+    const seenNodes = new Set<string>();
+
     // -- Do a depth-first traversal to get the result
     function preOrder(t: Tree, node: string): IdValue[] {
+      if (seenNodes.has(node)) {
+        console.warn(
+          'RoomService list cycle detected. Consider updating @roomservice/browser.'
+        );
+        return [];
+      }
+      seenNodes.add(node);
+
       let result: IdValue[] = [];
       const value = t.valueById.get(node);
 

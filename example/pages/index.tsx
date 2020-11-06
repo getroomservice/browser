@@ -87,13 +87,13 @@ export default function Home() {
       });
 
       const room = await rs.room('wefae');
-      const p = await room.presence();
+      const p = room.presence();
       setPresence(p);
       setMe(p.me);
 
       const v = await p.getAll<Position>('position');
       setPositions(v);
-      return room.subscribe<Position>(p, 'position', (msg) => {
+      return room.subscribe<Position>(p, 'position', msg => {
         setPositions(msg);
       });
     }

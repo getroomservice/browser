@@ -38,7 +38,11 @@ describe('list clients', () => {
       actor: 'alpha',
     });
 
-    const finishedAlpha = alpha.push('"1"').push('2').push(3).push('');
+    const finishedAlpha = alpha
+      .push('"1"')
+      .push('2')
+      .push(3)
+      .push('');
 
     expect(finishedAlpha.toArray()).toEqual(['"1"', '2', 3, '']);
   });
@@ -53,7 +57,11 @@ describe('list clients', () => {
       actor: 'alpha',
     });
 
-    const finished = alpha.push(1).push({ x: 20, y: 30 }).push(3).push('cats');
+    const finished = alpha
+      .push(1)
+      .push({ x: 20, y: 30 })
+      .push(3)
+      .push('cats');
 
     expect(finished.map((val, i, key) => [val, i, key])).toEqual([
       [1, 0, '0:alpha'],
@@ -194,5 +202,23 @@ describe('list clients', () => {
       'right',
       'last',
     ]);
+  });
+
+  test('List Clients insertAt correctly', () => {
+    const l = new InnerListClient({
+      checkpoint,
+      roomID,
+      docID,
+      listID,
+      ws,
+      actor: 'me',
+    });
+
+    const finished = l
+      .insertAt(0, 'c')
+      .insertAt(0, 'a')
+      .insertAt(1, 'b');
+
+    expect(finished.toArray()).toEqual(['a', 'b', 'c']);
   });
 });

@@ -4,12 +4,15 @@ import ReverseTree from './ReverseTree';
 import { unescape, escape } from './escape';
 import { unescapeID } from './util';
 import invariant from 'tiny-invariant';
+import { LocalBus } from 'localbus';
 
 export class InnerListClient<T extends any> implements ObjectClient {
   private roomID: string;
   private docID: string;
   private ws: SuperlumeWebSocket;
   private rt: ReverseTree;
+  private bus: LocalBus<any>;
+  private actor: string;
 
   // Map indexes to item ids
   private itemIDs: Array<string> = [];
@@ -23,12 +26,15 @@ export class InnerListClient<T extends any> implements ObjectClient {
     listID: string;
     ws: SuperlumeWebSocket;
     actor: string;
+    bus: LocalBus<{ args: string[]; from: string }>;
   }) {
     this.roomID = props.roomID;
     this.docID = props.docID;
     this.id = props.listID;
     this.ws = props.ws;
     this.rt = new ReverseTree(props.actor);
+    this.bus = props.bus;
+    this.actor = props.actor;
 
     invariant(
       props.checkpoint.lists[props.listID],
@@ -51,6 +57,10 @@ export class InnerListClient<T extends any> implements ObjectClient {
     this.ws.send('doc:cmd', {
       room: this.roomID,
       args: cmd,
+    });
+    this.bus.publish({
+      args: cmd,
+      from: this.actor,
     });
   }
 
@@ -80,7 +90,7 @@ export class InnerListClient<T extends any> implements ObjectClient {
         const insItemID = cmd[4];
         const insValue = cmd[5];
         this.itemIDs.splice(
-          this.itemIDs.findIndex((f) => f === insAfter) + 1,
+          this.itemIDs.findIndex(f => f === insAfter) + 1,
           0,
           insItemID
         );
@@ -95,7 +105,7 @@ export class InnerListClient<T extends any> implements ObjectClient {
         const delItemID = cmd[3];
         this.rt.delete(delItemID);
         this.itemIDs.splice(
-          this.itemIDs.findIndex((f) => f === delItemID),
+          this.itemIDs.findIndex(f => f === delItemID),
           1
         );
         break;
@@ -205,6 +215,6 @@ export class InnerListClient<T extends any> implements ObjectClient {
   }
 
   toArray(): T[] {
-    return this.rt.toArray().map((m) => unescape(m)) as any[];
+    return this.rt.toArray().map(m => unescape(m)) as any[];
   }
 }

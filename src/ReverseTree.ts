@@ -8,10 +8,14 @@ interface Node {
   id: string;
 }
 
-interface Tree {
-  children: Tree[];
-  value: any;
+interface IdValue {
   id: string;
+  value: string;
+}
+
+interface Tree {
+  childrenById: Map<string, Array<string>>;
+  valueById: Map<string, NodeValue>;
 }
 
 /**
@@ -110,64 +114,35 @@ export default class ReverseTree {
   }
 
   private toTree(): Tree {
-    const root: Tree = {
-      children: [],
-      id: 'root',
-      value: '',
-    };
-    const trees: { [key: string]: Tree } = { root };
+    const childrenById = new Map<string, Array<string>>();
+    const valueById = new Map<string, NodeValue>();
 
     for (const node of this.log) {
-      const tree: Tree = {
-        children: [],
-        id: node.id,
-        value: node.value,
-      };
-      trees[node.id] = tree;
-
-      if (node.after === 'root') {
-        root.children.push(tree);
-      } else {
-        /* This can happen if three or more people are 
-        editing this at once. For example:
-
-              +---+      
-          +-->| A |      
-          |   +---+      
-          |              
-          |              
-          |              
-        +---+       +---+
-        | B |------>| C |
-        +---+       +---+
-
-        If B adds something after C, but A and C haven't 
-        synced up yet, then A may not know how to apply that 
-        change. To prevent this from diverging, we'll
-        ignore this branch for the time being.
-        */
-        if (!trees[node.after]) {
-          continue;
-        }
-
-        trees[node.after].children.push(tree);
+      if (!childrenById.has(node.after)) {
+        childrenById.set(node.after, []);
       }
+      childrenById.get(node.after)?.push(node.id);
+      valueById.set(node.id, node.value);
     }
 
-    return root;
-  }
+    childrenById.forEach(children => {
+      //  sort by logical timestamp descending so that latest inserts appear first
+      children.sort((a, b) => {
+        const [leftCount, leftActor] = a.split(':');
+        const [rightCount, rightActor] = b.split(':');
 
-  sortLog() {
-    this.log.sort((a, b) => {
-      const [leftCount, leftActor] = a.id.split(':');
-      const [rightCount, rightActor] = b.id.split(':');
+        if (leftCount === rightCount) {
+          return leftActor.localeCompare(rightActor);
+        }
 
-      if (leftCount === rightCount) {
-        return leftActor.localeCompare(rightActor);
-      }
-
-      return parseInt(leftCount) - parseInt(rightCount);
+        return parseInt(rightCount) - parseInt(leftCount);
+      });
     });
+
+    return {
+      childrenById,
+      valueById,
+    };
   }
 
   lastID(): string {
@@ -175,54 +150,57 @@ export default class ReverseTree {
       return 'root';
     }
 
-    this.sortLog();
     const root = this.toTree();
 
     // Search the right side of the tree
-    function right(t: Tree): Tree {
-      if (!t.children || t.children.length === 0) {
-        return t;
+    function right(t: Tree, node: string): string {
+      const children = t.childrenById.get(node);
+      if (!children || children.length === 0) {
+        return node;
       }
 
-      return right(t.children[t.children.length - 1]);
+      //
+      return right(t, children[children.length - 1]);
     }
 
-    return right(root).id;
+    return right(root, 'root');
   }
 
-  postOrderTraverse() {
-    this.sortLog();
-
+  preOrderTraverse() {
     // -- Convert the log into a regular tree
-    const root = this.toTree();
+    const tree = this.toTree();
 
     // -- Do a depth-first traversal to get the result
-    function postorder(t: Tree): Tree[] {
-      if (!t.children || t.children.length === 0) {
-        return [];
-      }
+    function preOrder(t: Tree, node: string): IdValue[] {
+      let result: IdValue[] = [];
+      const value = t.valueById.get(node);
 
-      let children: Tree[] = [];
-      for (let child of t.children) {
-        if (typeof child.value !== 'string') {
-          // Skip tombstones
-          if (child.value.t === '') {
-            children = children.concat([...postorder(child)]);
-            continue;
-          }
+      if (value) {
+        if (typeof value === 'string') {
+          result.push({ value, id: node });
+        } else if ('t' in value && value.t === '') {
+          //  Skip tombstones
+        } else {
           throw new Error('Unimplemented');
         }
-
-        children = children.concat([child, ...postorder(child)]);
       }
 
-      return children;
+      const children = t.childrenById.get(node);
+      if (!children || children.length === 0) {
+        return result;
+      }
+
+      for (let child of children) {
+        result = result.concat(preOrder(t, child));
+      }
+
+      return result;
     }
 
-    return postorder(root);
+    return preOrder(tree, 'root');
   }
 
   toArray(): Array<any> {
-    return this.postOrderTraverse().map((c) => c.value);
+    return this.preOrderTraverse().map(idValue => idValue.value);
   }
 }

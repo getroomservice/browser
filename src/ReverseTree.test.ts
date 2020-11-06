@@ -30,9 +30,9 @@ test('reverse tree skips unreceived dependencies', () => {
 test('reverse tree can insert lots of items', () => {
   const rt = new ReverseTree('me');
 
-  const result = [];
+  const result: string[] = [];
   for (let i = 0; i < 20; i++) {
-    result.push(`donut #${i}`);
+    result.splice(0, 0, `donut #${i}`);
     rt.insert('root', `donut #${i}`);
   }
   expect(rt.toArray()).toEqual(result);
@@ -41,14 +41,14 @@ test('reverse tree can insert lots of items', () => {
 test('reverse tree always returns the last id', () => {
   const rt = new ReverseTree('me');
 
-  const result = [];
   for (let i = 0; i < 20; i++) {
-    result.push(`${i}`);
     rt.insert('root', `${i}`);
   }
 
   const arr = rt.toArray();
-  expect(rt.nodes[`19:me`].value).toEqual(arr[arr.length - 1]);
+  //  later inserts after the root come first, so the last node in the array is
+  //  the first that was inserted
+  expect(rt.nodes[`0:me`].value).toEqual(arr[arr.length - 1]);
 });
 
 test('reverse tree doesnt interweave', () => {

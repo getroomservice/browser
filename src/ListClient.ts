@@ -160,7 +160,20 @@ export class InnerListClient<T extends any> implements ObjectClient {
   }
 
   insertAfter(index: number, val: T): InnerListClient<T> {
-    let afterID = this.itemIDs[index];
+    return this.insertAt(index + 1, val);
+  }
+
+  insertAt(index: number, val: T): InnerListClient<T> {
+    if (index < 0) {
+      throw 'negative indices unsupported';
+    }
+    let afterID: string;
+    if (index == 0) {
+      afterID = 'root';
+    } else {
+      afterID = this.itemIDs[index - 1];
+    }
+
     if (!afterID) {
       throw new RangeError(`List '${this.id}' has no index: '${index}'`);
     }

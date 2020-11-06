@@ -5,12 +5,12 @@ const rs = new RoomService({
   auth: '/api/hello',
 });
 
-function useRoom(): any {
+function useRoom(name: string): any {
   const [room, setRoom] = useState();
 
   useEffect(() => {
     async function load() {
-      const room = await rs.room('subs-demo');
+      const room = await rs.room(name);
       setRoom(room as any);
     }
     load();
@@ -20,7 +20,7 @@ function useRoom(): any {
 }
 
 function Input(props) {
-  const room = useRoom();
+  const room = useRoom(props.roomName);
 
   function onChange(e) {
     if (!room) return;
@@ -32,7 +32,7 @@ function Input(props) {
 
 function ViewPort(props) {
   const [map, setMap] = useState() as any;
-  const room = useRoom();
+  const room = useRoom(props.roomName);
   const counts = useRef(0);
 
   useEffect(() => {
@@ -62,27 +62,36 @@ export default function Home() {
           width: 100,
         }}
       >
-        <Input mapName="pets" />
+        <Input mapName="pets" roomName="alpha" />
         <hr />
-        <ViewPort mapName="pets" />
+        <ViewPort mapName="pets" roomName="alpha" />
       </div>
       <div
         style={{
           width: 100,
         }}
       >
-        <Input mapName="cats" />
+        <Input mapName="pets" roomName="alpha" />
         <hr />
-        <ViewPort mapName="cats" />
+        <ViewPort mapName="pets" roomName="alpha" />
       </div>
       <div
         style={{
           width: 100,
         }}
       >
-        <Input mapName="pets" />
+        <Input mapName="cats" roomName="alpha" />
         <hr />
-        <ViewPort mapName="pets" />
+        <ViewPort mapName="cats" roomName="alpha" />
+      </div>
+      <div
+        style={{
+          width: 100,
+        }}
+      >
+        <Input mapName="pets" roomName="beta" />
+        <hr />
+        <ViewPort mapName="pets" roomName="beta" />
       </div>
     </div>
   );

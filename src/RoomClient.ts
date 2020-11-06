@@ -30,11 +30,12 @@ const LIST_CMDS = ['lcreate', 'lins', 'linsref', 'lput', 'lputref', 'ldel'];
 
 type ListenerBundle = Array<Listener>;
 
+type InternalFunctions =
+  | 'dangerouslyUpdateClientDirectly'
+  | 'dangerouslyPreventMutations'
+  | 'dangerouslyAllowMutations';
 type Omit<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>>;
-export type MapClient<T> = Omit<
-  InnerMapClient<T>,
-  'dangerouslyUpdateClientDirectly' | 'id'
->;
+export type MapClient<T> = Omit<InnerMapClient<T>, InternalFunctions | 'id'>;
 export type ListClient<T> = Omit<
   InnerListClient<T>,
   'dangerouslyUpdateClientDirectly' | 'id'
@@ -373,8 +374,11 @@ export class RoomClient {
       return this.subscribePresence<T>(obj, onChangeFnOrString, onChangeFn);
     }
 
-    //  create new closure so fns can be subscribed/unsubscribed multiple times
-    const cb = (obj: any, from: string) => {
+    // create new closure so fns can be subscribed/unsubscribed multiple times
+    const cb = (
+      obj: InnerMapClient<any> | InnerListClient<any>,
+      from: string
+    ) => {
       onChangeFnOrString(obj, from);
     };
 

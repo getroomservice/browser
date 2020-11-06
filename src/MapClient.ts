@@ -2,6 +2,7 @@ import { ObjectClient, MapCheckpoint } from './types';
 import SuperlumeWebSocket from './ws';
 import { escape, unescape } from './escape';
 import { LocalBus } from 'localbus';
+import { errNoInfiniteLoop } from './errs';
 
 export class InnerMapClient<T extends any> implements ObjectClient {
   private roomID: string;
@@ -10,6 +11,10 @@ export class InnerMapClient<T extends any> implements ObjectClient {
   private store: { [key: string]: number | string | object | T };
   private bus: LocalBus<any>;
   private actor: string;
+
+  // If true, this client will throw an error if it's trying to
+  // mutate itself to prevent an infinite loop.
+  private throwsOnMutate: boolean = false;
 
   id: string;
 
@@ -40,14 +45,21 @@ export class InnerMapClient<T extends any> implements ObjectClient {
   }
 
   private sendCmd(cmd: string[]) {
+    if (this.throwsOnMutate) {
+      throw errNoInfiniteLoop();
+    }
+
     this.ws.send('doc:cmd', {
       room: this.roomID,
       args: cmd,
     });
+
+    this.throwsOnMutate = true;
     this.bus.publish({
       from: this.actor,
       args: cmd,
     });
+    this.throwsOnMutate = false;
   }
 
   private clone(): InnerMapClient<T> {

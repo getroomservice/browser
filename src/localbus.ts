@@ -1,3 +1,5 @@
+import { errNoInfiniteLoop } from './errs';
+
 // 🚌
 // Local pubsub, so that if you call .set in one place
 // it will trigger a .subscribe elsewhere, without
@@ -9,18 +11,27 @@ export class LocalBus<T> {
     this.subs = new Set<(msg: T) => void>();
   }
 
+  unsubscribe(fn: (msg: T) => void) {
+    this.subs.delete(fn);
+  }
+
   subscribe(fn: (msg: T) => void): (msg: T) => void {
     this.subs.add(fn);
     return fn;
   }
 
-  unsubscribe(fn: (msg: T) => void) {
-    this.subs.delete(fn);
-  }
+  private isPublishing: boolean = false
 
   publish(msg: T) {
+    // This is an infinite loop
+    if (this.isPublishing) {
+      throw errNoInfiniteLoop();
+    }
+
+    this.isPublishing = true 
     this.subs.forEach(fn => {
       fn(msg);
     });
+    this.isPublishing = false
   }
 }

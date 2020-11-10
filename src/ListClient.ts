@@ -5,7 +5,6 @@ import { unescape, escape } from './escape';
 import { unescapeID } from './util';
 import invariant from 'tiny-invariant';
 import { LocalBus } from './localbus';
-import { errNoInfiniteLoop } from './errs';
 
 export class InnerListClient<T extends any> implements ObjectClient {
   private roomID: string;
@@ -14,10 +13,6 @@ export class InnerListClient<T extends any> implements ObjectClient {
   private rt: ReverseTree;
   private bus: LocalBus<any>;
   private actor: string;
-
-  // If true, this client will throw an error if it's trying to
-  // mutate itself to prevent an infinite loop.
-  private throwsOnMutate: boolean = false;
 
   // Map indexes to item ids
   private itemIDs: Array<string> = [];
@@ -59,21 +54,15 @@ export class InnerListClient<T extends any> implements ObjectClient {
   }
 
   private sendCmd(cmd: string[]) {
-    if (this.throwsOnMutate) {
-      throw errNoInfiniteLoop();
-    }
-
     this.ws.send('doc:cmd', {
       room: this.roomID,
       args: cmd,
     });
 
-    this.throwsOnMutate = true;
     this.bus.publish({
       args: cmd,
       from: this.actor,
     });
-    this.throwsOnMutate = false;
   }
 
   private clone(): InnerListClient<T> {

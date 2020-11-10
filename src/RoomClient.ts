@@ -12,10 +12,11 @@ import { InnerPresenceClient } from './PresenceClient';
 import invariant from 'tiny-invariant';
 import { isOlderVS } from './versionstamp';
 import {
-  WebSocketDocFwdMessage,
   WebSocketPresenceFwdMessage,
   WebSocketServerMessage,
 } from './wsMessages';
+import { LocalBus } from './localbus';
+import { stringify } from 'querystring';
 
 const WEBSOCKET_TIMEOUT = 1000 * 2;
 
@@ -30,11 +31,10 @@ const LIST_CMDS = ['lcreate', 'lins', 'linsref', 'lput', 'lputref', 'ldel'];
 
 type ListenerBundle = Array<Listener>;
 
+type InternalFunctions =
+  | 'dangerouslyUpdateClientDirectly';
 type Omit<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>>;
-export type MapClient<T> = Omit<
-  InnerMapClient<T>,
-  'dangerouslyUpdateClientDirectly' | 'id'
->;
+export type MapClient<T> = Omit<InnerMapClient<T>, InternalFunctions | 'id'>;
 export type ListClient<T> = Omit<
   InnerListClient<T>,
   'dangerouslyUpdateClientDirectly' | 'id'
@@ -43,6 +43,11 @@ export type PresenceClient = Omit<
   InnerPresenceClient,
   'dangerouslyUpdateClientDirectly'
 >;
+
+interface DispatchDocCmdMsg {
+  args: string[];
+  from: string;
+}
 
 export class RoomClient {
   private ws: SuperlumeWebSocket;
@@ -124,19 +129,9 @@ export class RoomClient {
     });
   }
 
-  private dispatchMapCmd(
-    objID: string,
-    body: Prop<WebSocketDocFwdMessage, 'body'>
-  ) {
+  private dispatchMapCmd(objID: string, body: DispatchDocCmdMsg) {
     if (!this.mapClients[objID]) {
-      const m = new InnerMapClient<any>({
-        checkpoint: this.checkpoint.maps[objID] || {},
-        roomID: this.roomID,
-        docID: this.docID,
-        mapID: objID,
-        ws: this.ws,
-      });
-      this.mapClients[objID] = m;
+      this.createMapLocally(objID);
     }
 
     const client = this.mapClients[objID];
@@ -147,20 +142,9 @@ export class RoomClient {
     }
   }
 
-  private dispatchListCmd(
-    objID: string,
-    body: Prop<WebSocketDocFwdMessage, 'body'>
-  ) {
+  private dispatchListCmd(objID: string, body: DispatchDocCmdMsg) {
     if (!this.listClients[objID]) {
-      const l = new InnerListClient<any>({
-        checkpoint: this.checkpoint,
-        roomID: this.roomID,
-        docID: this.docID,
-        listID: objID,
-        ws: this.ws,
-        actor: this.actor,
-      });
-      this.listClients[objID] = l;
+      this.createListLocally(objID);
     }
 
     const client = this.listClients[objID];
@@ -257,6 +241,25 @@ export class RoomClient {
     return this.actor;
   }
 
+  private createListLocally<T extends any>(name: string) {
+    const bus = new LocalBus<DispatchDocCmdMsg>();
+    bus.subscribe(body => {
+      this.dispatchListCmd(name, body);
+    });
+
+    const l = new InnerListClient<T>({
+      checkpoint: this.checkpoint,
+      roomID: this.roomID,
+      docID: this.docID,
+      listID: name,
+      ws: this.ws,
+      actor: this.actor,
+      bus,
+    });
+    this.listClients[name] = l;
+    return l;
+  }
+
   list<T extends any>(name: string): ListClient<T> {
     if (this.listClients[name]) {
       return this.listClients[name];
@@ -277,17 +280,26 @@ export class RoomClient {
       };
     }
 
-    const l = new InnerListClient<T>({
-      checkpoint: this.checkpoint,
+    return this.createListLocally(name);
+  }
+
+  private createMapLocally<T extends any>(name: string) {
+    const bus = new LocalBus<DispatchDocCmdMsg>();
+    bus.subscribe(body => {
+      this.dispatchMapCmd(name, body);
+    });
+
+    const m = new InnerMapClient<T>({
+      checkpoint: this.checkpoint.maps[name] || {},
       roomID: this.roomID,
       docID: this.docID,
-      listID: name,
+      mapID: name,
       ws: this.ws,
+      bus,
       actor: this.actor,
     });
-    this.listClients[name] = l;
-
-    return l;
+    this.mapClients[name] = m;
+    return m;
   }
 
   map<T extends any>(name: string): MapClient<T> {
@@ -303,27 +315,30 @@ export class RoomClient {
       });
     }
 
-    const m = new InnerMapClient<T>({
-      checkpoint: this.checkpoint.maps[name] || {},
-      roomID: this.roomID,
-      docID: this.docID,
-      mapID: name,
-      ws: this.ws,
-    });
-    this.mapClients[name] = m;
-
-    return m;
+    return this.createMapLocally(name);
   }
 
   presence(): PresenceClient {
     if (this.InnerPresenceClient) {
       return this.InnerPresenceClient;
     }
+    const bus = new LocalBus<{key: string, value: any, expAt: number }>()
+    bus.subscribe(body => {
+      this.dispatchPresenceCmd({
+        key: body.key,
+        value: body.value,
+        expAt: body.expAt,
+        from: this.actor,
+        room: this.roomID
+      })
+    })
+
     const p = new InnerPresenceClient({
       roomID: this.roomID,
       ws: this.ws,
       actor: this.actor,
       token: this.token,
+      bus
     });
     try {
       this.InnerPresenceClient = p;
@@ -370,8 +385,11 @@ export class RoomClient {
       return this.subscribePresence<T>(obj, onChangeFnOrString, onChangeFn);
     }
 
-    //  create new closure so fns can be subscribed/unsubscribed multiple times
-    const cb = (obj: any, from: string) => {
+    // create new closure so fns can be subscribed/unsubscribed multiple times
+    const cb = (
+      obj: InnerMapClient<any> | InnerListClient<any>,
+      from: string
+    ) => {
       onChangeFnOrString(obj, from);
     };
 

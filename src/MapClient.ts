@@ -1,12 +1,20 @@
 import { ObjectClient, MapCheckpoint } from './types';
 import SuperlumeWebSocket from './ws';
 import { escape, unescape } from './escape';
+import { LocalBus } from 'localbus';
+import { errNoInfiniteLoop } from './errs';
 
 export class InnerMapClient<T extends any> implements ObjectClient {
   private roomID: string;
   private docID: string;
   private ws: SuperlumeWebSocket;
   private store: { [key: string]: number | string | object | T };
+  private bus: LocalBus<any>;
+  private actor: string;
+
+  // If true, this client will throw an error if it's trying to
+  // mutate itself to prevent an infinite loop.
+  private throwsOnMutate: boolean = false;
 
   id: string;
 
@@ -15,13 +23,17 @@ export class InnerMapClient<T extends any> implements ObjectClient {
     roomID: string;
     docID: string;
     mapID: string;
+    actor: string;
     ws: SuperlumeWebSocket;
+    bus: LocalBus<{ from: string; args: string[] }>;
   }) {
     this.roomID = props.roomID;
     this.docID = props.docID;
     this.id = props.mapID;
     this.ws = props.ws;
     this.store = {};
+    this.bus = props.bus;
+    this.actor = props.actor;
 
     // import
     for (let k in props.checkpoint) {
@@ -33,10 +45,21 @@ export class InnerMapClient<T extends any> implements ObjectClient {
   }
 
   private sendCmd(cmd: string[]) {
+    if (this.throwsOnMutate) {
+      throw errNoInfiniteLoop();
+    }
+
     this.ws.send('doc:cmd', {
       room: this.roomID,
       args: cmd,
     });
+
+    this.throwsOnMutate = true;
+    this.bus.publish({
+      from: this.actor,
+      args: cmd,
+    });
+    this.throwsOnMutate = false;
   }
 
   private clone(): InnerMapClient<T> {

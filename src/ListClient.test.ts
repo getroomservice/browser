@@ -1,3 +1,4 @@
+import { LocalBus } from './localbus';
 import { InnerListClient } from './ListClient';
 import { DocumentCheckpoint } from './types';
 import SuperlumeWebSocket from './ws';
@@ -36,6 +37,7 @@ describe('list clients', () => {
       listID,
       ws,
       actor: 'alpha',
+      bus: new LocalBus()
     });
 
     const finishedAlpha = alpha.push('"1"').push('2').push(3).push('');
@@ -51,6 +53,7 @@ describe('list clients', () => {
       listID,
       ws,
       actor: 'alpha',
+      bus: new LocalBus()
     });
 
     const finished = alpha.push(1).push({ x: 20, y: 30 }).push(3).push('cats');
@@ -71,6 +74,7 @@ describe('list clients', () => {
       listID,
       ws,
       actor: 'alpha',
+      bus: new LocalBus()
     });
 
     const finished = alpha.push(1, 2, 'foo');
@@ -92,6 +96,7 @@ describe('list clients', () => {
       listID,
       ws,
       actor: 'alpha',
+      bus: new LocalBus()
     });
     alpha.push('cats');
 
@@ -120,6 +125,7 @@ describe('list clients', () => {
       listID,
       ws,
       actor: 'alpha',
+      bus: new LocalBus()
     });
     alpha = alpha.push('cats');
     alpha = alpha.dangerouslyUpdateClientDirectly([
@@ -179,6 +185,7 @@ describe('list clients', () => {
       listID: 'todo',
       ws,
       actor: 'gst_b355e9c9-f1d3-4233-a6c5-e75e1cd0e52c',
+      bus: new LocalBus()
     });
 
     // Sanity check our import is correct

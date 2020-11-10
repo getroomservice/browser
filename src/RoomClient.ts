@@ -31,9 +31,7 @@ const LIST_CMDS = ['lcreate', 'lins', 'linsref', 'lput', 'lputref', 'ldel'];
 type ListenerBundle = Array<Listener>;
 
 type InternalFunctions =
-  | 'dangerouslyUpdateClientDirectly'
-  | 'dangerouslyPreventMutations'
-  | 'dangerouslyAllowMutations';
+  | 'dangerouslyUpdateClientDirectly';
 type Omit<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>>;
 export type MapClient<T> = Omit<InnerMapClient<T>, InternalFunctions | 'id'>;
 export type ListClient<T> = Omit<

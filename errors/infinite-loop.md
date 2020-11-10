@@ -1,4 +1,4 @@
-# Don't Freeze
+# Infinite Loop
 
 Infinite loop detected.
 

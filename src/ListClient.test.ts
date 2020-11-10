@@ -219,6 +219,7 @@ describe('list clients', () => {
       listID,
       ws,
       actor: 'me',
+      bus: new LocalBus()
     });
 
     const finished = l

@@ -58,3 +58,54 @@ test('RoomClient.connect() will send authenticate and connect messages', (done) 
     done();
   });
 });
+
+test("infinite loop bugs can be fixed with example", () => {
+  const conn = {
+    onmessage: (_?: MessageEvent) => {},
+    send: (_?: any) => {},
+    readyState: WebSocket.OPEN,
+  };
+  const client = new RoomClient({
+    actor: 'me',
+    checkpoint: cp,
+    roomID: 'room',
+    token: 'token',
+    conn: conn,
+  });
+
+  const m = client.map("mymap")
+  let state = m
+  client.subscribe(m, nextMap => {
+    state = nextMap
+  })
+  state.set("dogs", "cats")
+  state.set('cats', "dogs") // Two loops are fine!
+
+  expect(state !== m).toBeTruthy()
+})
+
+test("we catch infinite loops", () => {
+
+  function thisThrows() {
+    const conn = {
+      onmessage: (_?: MessageEvent) => {},
+      send: (_?: any) => {},
+      readyState: WebSocket.OPEN,
+    };
+    const client = new RoomClient({
+      actor: 'me',
+      checkpoint: cp,
+      roomID: 'room',
+      token: 'token',
+      conn: conn,
+    });
+    const m = client.map("mymap")
+    client.subscribe(m, nextMap => {
+      nextMap.set("I", "cause an infinite loop")
+    })
+
+    m.set("I", "trigger the bad times")
+  }
+
+  expect(thisThrows).toThrow()
+})

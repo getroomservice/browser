@@ -16,7 +16,6 @@ import {
   WebSocketServerMessage,
 } from './wsMessages';
 import { LocalBus } from './localbus';
-import { stringify } from 'querystring';
 
 const WEBSOCKET_TIMEOUT = 1000 * 2;
 

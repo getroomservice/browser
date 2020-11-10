@@ -465,17 +465,23 @@ export class RoomClient {
   }
 }
 
-export async function createRoom(
-  conn: WebSocketLikeConnection,
-  docsURL: string,
-  authStrategy: AuthStrategy,
-  room: string,
-  document: string
-): Promise<RoomClient> {
-  const sess = await fetchSession(authStrategy, room, document);
-  const { body } = await fetchDocument(docsURL, sess.token, sess.docID);
+export async function createRoom<T extends object>(params: {
+  conn: WebSocketLikeConnection;
+  docsURL: string;
+  authStrategy: AuthStrategy<T>;
+  authCtx: T;
+  room: string;
+  document: string;
+}): Promise<RoomClient> {
+  const sess = await fetchSession(
+    params.authStrategy,
+    params.authCtx,
+    params.room,
+    params.document
+  );
+  const { body } = await fetchDocument(params.docsURL, sess.token, sess.docID);
   const roomClient = new RoomClient({
-    conn,
+    conn: params.conn,
     actor: sess.guestReference,
     checkpoint: body,
     token: sess.token,

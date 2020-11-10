@@ -73,7 +73,7 @@ export class RoomClient {
     this.checkpoint = params.checkpoint;
     this.InnerPresenceClient = undefined;
 
-    this.ws.bind('doc:fwd', body => {
+    this.ws.bind('doc:fwd', (body) => {
       if (body.room !== this.roomID) return;
       if (!body.args || body.args.length < 3) {
         // Potentially a network failure, we don't want to crash,
@@ -104,11 +104,11 @@ export class RoomClient {
       }
     });
 
-    this.ws.bind('presence:fwd', body => {
+    this.ws.bind('presence:fwd', (body) => {
       this.dispatchPresenceCmd(body);
     });
 
-    this.ws.bind('room:rm_guest', body => {
+    this.ws.bind('room:rm_guest', (body) => {
       if (body.room !== this.roomID) return;
       const client = this.presence() as InnerPresenceClient;
 
@@ -221,8 +221,8 @@ export class RoomClient {
       new Promise((_, reject) =>
         setTimeout(() => reject('timeout'), WEBSOCKET_TIMEOUT)
       ),
-      new Promise(resolve => {
-        off = this.ws.bind(msg as any, body => {
+      new Promise((resolve) => {
+        off = this.ws.bind(msg as any, (body) => {
           resolve(body);
         });
       }),
@@ -236,7 +236,7 @@ export class RoomClient {
    */
   async reconnect() {
     if (!this.errorListener) {
-      this.errorListener = this.ws.bind('error', err => {
+      this.errorListener = this.ws.bind('error', (err) => {
         console.error(
           'Room Service encountered a server-side error. If you see this, please let us know; this could be a bug.',
           err
@@ -449,17 +449,23 @@ export class RoomClient {
   }
 }
 
-export async function createRoom(
-  conn: WebSocketLikeConnection,
-  docsURL: string,
-  authStrategy: AuthStrategy,
-  room: string,
-  document: string
-): Promise<RoomClient> {
-  const sess = await fetchSession(authStrategy, room, document);
-  const { body } = await fetchDocument(docsURL, sess.token, sess.docID);
+export async function createRoom<T extends object>(params: {
+  conn: WebSocketLikeConnection;
+  docsURL: string;
+  authStrategy: AuthStrategy<T>;
+  authCtx: T;
+  room: string;
+  document: string;
+}): Promise<RoomClient> {
+  const sess = await fetchSession(
+    params.authStrategy,
+    params.authCtx,
+    params.room,
+    params.document
+  );
+  const { body } = await fetchDocument(params.docsURL, sess.token, sess.docID);
   const roomClient = new RoomClient({
-    conn,
+    conn: params.conn,
     actor: sess.guestReference,
     checkpoint: body,
     token: sess.token,
@@ -477,7 +483,7 @@ function removeCallback(
   if (!cbs) {
     return [];
   }
-  return cbs.filter(existingCb => {
+  return cbs.filter((existingCb) => {
     return existingCb !== rmCb;
   });
 }

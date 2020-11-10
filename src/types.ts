@@ -110,5 +110,8 @@ export interface AuthResponse {
   resources: Resource[];
 }
 
-export type AuthFunction = (room: string) => Promise<AuthResponse>;
-export type AuthStrategy = string | AuthFunction;
+export type AuthFunction<T extends object> = (params: {
+  room: string;
+  ctx: T;
+}) => Promise<AuthResponse>;
+export type AuthStrategy<T extends object> = string | AuthFunction<T>;

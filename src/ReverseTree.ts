@@ -125,7 +125,7 @@ export default class ReverseTree {
       valueById.set(node.id, node.value);
     }
 
-    childrenById.forEach(children => {
+    childrenById.forEach((children) => {
       //  sort by logical timestamp descending so that latest inserts appear first
       children.sort((a, b) => {
         const [leftCount, leftActor] = a.split(':');
@@ -210,6 +210,6 @@ export default class ReverseTree {
   }
 
   toArray(): Array<any> {
-    return this.preOrderTraverse().map(idValue => idValue.value);
+    return this.preOrderTraverse().map((idValue) => idValue.value);
   }
 }

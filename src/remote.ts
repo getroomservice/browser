@@ -66,14 +66,18 @@ export interface LocalSession {
   roomID: string;
 }
 
-export async function fetchSession(
-  strategy: AuthStrategy,
+export async function fetchSession<T extends object>(
+  strategy: AuthStrategy<T>,
+  ctx: T,
   room: string,
   document: string
 ): Promise<LocalSession> {
   // A user defined function
   if (typeof strategy === 'function') {
-    const result = await strategy(room);
+    const result = await strategy({
+      room,
+      ctx,
+    });
     if (!result.user) {
       throw new Error(`The auth function must return a 'user' key.`);
     }

@@ -80,7 +80,7 @@ export class InnerListClient<T extends any> implements ObjectClient {
         const insItemID = cmd[4];
         const insValue = cmd[5];
         this.itemIDs.splice(
-          this.itemIDs.findIndex(f => f === insAfter) + 1,
+          this.itemIDs.findIndex((f) => f === insAfter) + 1,
           0,
           insItemID
         );
@@ -95,7 +95,7 @@ export class InnerListClient<T extends any> implements ObjectClient {
         const delItemID = cmd[3];
         this.rt.delete(delItemID);
         this.itemIDs.splice(
-          this.itemIDs.findIndex(f => f === delItemID),
+          this.itemIDs.findIndex((f) => f === delItemID),
           1
         );
         break;
@@ -220,6 +220,6 @@ export class InnerListClient<T extends any> implements ObjectClient {
   }
 
   toArray(): T[] {
-    return this.rt.toArray().map(m => unescape(m)) as any[];
+    return this.rt.toArray().map((m) => unescape(m)) as any[];
   }
 }

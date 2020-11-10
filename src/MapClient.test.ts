@@ -63,10 +63,7 @@ describe('InnerMapClient', () => {
   });
 
   test('interprets mput', () => {
-    const val = map
-      .set('dogs', 'good')
-      .set('snakes', 'snakey')
-      .toObject();
+    const val = map.set('dogs', 'good').set('snakes', 'snakey').toObject();
 
     expect(val).toEqual({
       dogs: 'good',

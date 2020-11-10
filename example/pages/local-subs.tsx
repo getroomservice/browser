@@ -39,7 +39,7 @@ function ViewPort(props) {
     if (!room) return;
     const map = room.map(props.mapName);
     setMap(map);
-    room.subscribe(map, nextMap => {
+    room.subscribe(map, (nextMap) => {
       counts.current++;
       console.log(counts.current);
       setMap(nextMap);

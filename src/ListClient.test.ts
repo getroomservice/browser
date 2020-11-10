@@ -37,14 +37,10 @@ describe('list clients', () => {
       listID,
       ws,
       actor: 'alpha',
-      bus: new LocalBus()
+      bus: new LocalBus(),
     });
 
-    const finishedAlpha = alpha
-      .push('"1"')
-      .push('2')
-      .push(3)
-      .push('');
+    const finishedAlpha = alpha.push('"1"').push('2').push(3).push('');
 
     expect(finishedAlpha.toArray()).toEqual(['"1"', '2', 3, '']);
   });
@@ -57,14 +53,10 @@ describe('list clients', () => {
       listID,
       ws,
       actor: 'alpha',
-      bus: new LocalBus()
+      bus: new LocalBus(),
     });
 
-    const finished = alpha
-      .push(1)
-      .push({ x: 20, y: 30 })
-      .push(3)
-      .push('cats');
+    const finished = alpha.push(1).push({ x: 20, y: 30 }).push(3).push('cats');
 
     expect(finished.map((val, i, key) => [val, i, key])).toEqual([
       [1, 0, '0:alpha'],
@@ -82,7 +74,7 @@ describe('list clients', () => {
       listID,
       ws,
       actor: 'alpha',
-      bus: new LocalBus()
+      bus: new LocalBus(),
     });
 
     const finished = alpha.push(1, 2, 'foo');
@@ -104,7 +96,7 @@ describe('list clients', () => {
       listID,
       ws,
       actor: 'alpha',
-      bus: new LocalBus()
+      bus: new LocalBus(),
     });
     alpha.push('cats');
 
@@ -133,7 +125,7 @@ describe('list clients', () => {
       listID,
       ws,
       actor: 'alpha',
-      bus: new LocalBus()
+      bus: new LocalBus(),
     });
     alpha = alpha.push('cats');
     alpha = alpha.dangerouslyUpdateClientDirectly([
@@ -193,7 +185,7 @@ describe('list clients', () => {
       listID: 'todo',
       ws,
       actor: 'gst_b355e9c9-f1d3-4233-a6c5-e75e1cd0e52c',
-      bus: new LocalBus()
+      bus: new LocalBus(),
     });
 
     // Sanity check our import is correct
@@ -219,13 +211,10 @@ describe('list clients', () => {
       listID,
       ws,
       actor: 'me',
-      bus: new LocalBus()
+      bus: new LocalBus(),
     });
 
-    const finished = l
-      .insertAt(0, 'c')
-      .insertAt(0, 'a')
-      .insertAt(1, 'b');
+    const finished = l.insertAt(0, 'c').insertAt(0, 'a').insertAt(1, 'b');
 
     expect(finished.toArray()).toEqual(['a', 'b', 'c']);
   });

@@ -30,8 +30,7 @@ const LIST_CMDS = ['lcreate', 'lins', 'linsref', 'lput', 'lputref', 'ldel'];
 
 type ListenerBundle = Array<Listener>;
 
-type InternalFunctions =
-  | 'dangerouslyUpdateClientDirectly';
+type InternalFunctions = 'dangerouslyUpdateClientDirectly';
 type Omit<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>>;
 export type MapClient<T> = Omit<InnerMapClient<T>, InternalFunctions | 'id'>;
 export type ListClient<T> = Omit<
@@ -77,7 +76,7 @@ export class RoomClient {
     this.checkpoint = params.checkpoint;
     this.InnerPresenceClient = undefined;
 
-    this.ws.bind('doc:fwd', body => {
+    this.ws.bind('doc:fwd', (body) => {
       if (body.room !== this.roomID) return;
       if (!body.args || body.args.length < 3) {
         // Potentially a network failure, we don't want to crash,
@@ -108,11 +107,11 @@ export class RoomClient {
       }
     });
 
-    this.ws.bind('presence:fwd', body => {
+    this.ws.bind('presence:fwd', (body) => {
       this.dispatchPresenceCmd(body);
     });
 
-    this.ws.bind('room:rm_guest', body => {
+    this.ws.bind('room:rm_guest', (body) => {
       if (body.room !== this.roomID) return;
       const client = this.presence() as InnerPresenceClient;
 
@@ -204,8 +203,8 @@ export class RoomClient {
       new Promise((_, reject) =>
         setTimeout(() => reject('timeout'), WEBSOCKET_TIMEOUT)
       ),
-      new Promise(resolve => {
-        off = this.ws.bind(msg as any, body => {
+      new Promise((resolve) => {
+        off = this.ws.bind(msg as any, (body) => {
           resolve(body);
         });
       }),
@@ -219,7 +218,7 @@ export class RoomClient {
    */
   async reconnect() {
     if (!this.errorListener) {
-      this.errorListener = this.ws.bind('error', err => {
+      this.errorListener = this.ws.bind('error', (err) => {
         console.error(
           'Room Service encountered a server-side error. If you see this, please let us know; this could be a bug.',
           err
@@ -242,7 +241,7 @@ export class RoomClient {
 
   private createListLocally<T extends any>(name: string) {
     const bus = new LocalBus<DispatchDocCmdMsg>();
-    bus.subscribe(body => {
+    bus.subscribe((body) => {
       this.dispatchListCmd(name, body);
     });
 
@@ -284,7 +283,7 @@ export class RoomClient {
 
   private createMapLocally<T extends any>(name: string) {
     const bus = new LocalBus<DispatchDocCmdMsg>();
-    bus.subscribe(body => {
+    bus.subscribe((body) => {
       this.dispatchMapCmd(name, body);
     });
 
@@ -321,23 +320,23 @@ export class RoomClient {
     if (this.InnerPresenceClient) {
       return this.InnerPresenceClient;
     }
-    const bus = new LocalBus<{key: string, value: any, expAt: number }>()
-    bus.subscribe(body => {
+    const bus = new LocalBus<{ key: string; value: any; expAt: number }>();
+    bus.subscribe((body) => {
       this.dispatchPresenceCmd({
         key: body.key,
         value: body.value,
         expAt: body.expAt,
         from: this.actor,
-        room: this.roomID
-      })
-    })
+        room: this.roomID,
+      });
+    });
 
     const p = new InnerPresenceClient({
       roomID: this.roomID,
       ws: this.ws,
       actor: this.actor,
       token: this.token,
-      bus
+      bus,
     });
     try {
       this.InnerPresenceClient = p;
@@ -494,7 +493,7 @@ function removeCallback(
   if (!cbs) {
     return [];
   }
-  return cbs.filter(existingCb => {
+  return cbs.filter((existingCb) => {
     return existingCb !== rmCb;
   });
 }

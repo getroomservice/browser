@@ -10,7 +10,7 @@ For example, this code throws an "Infinite loop detected" error:
 
 ```tsx
 // This is causes an infinite loop
-room.subscribe(map, nextMap => {
+room.subscribe(map, (nextMap) => {
   nextMap.set('name', 'joe');
 });
 ```
@@ -25,7 +25,7 @@ For example:
 // This does not cause an infinite loop
 let state = map;
 
-room.subscribe(map, nextMap => {
+room.subscribe(map, (nextMap) => {
   state = nextMap;
 });
 

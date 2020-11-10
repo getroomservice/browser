@@ -16,17 +16,17 @@ export class InnerPresenceClient {
   private token: string;
   private cache: { [key: string]: PresenceCheckpoint<any> };
   private sendPres: (key: string, args: any) => any;
-  private bus: LocalBus<{key: string, value: any,  expAt: number}>;
+  private bus: LocalBus<{ key: string; value: any; expAt: number }>;
 
   constructor(props: {
     roomID: string;
     ws: SuperlumeWebSocket;
     actor: string;
     token: string;
-    bus: LocalBus<{key: string, value: any, expAt: number}>;
+    bus: LocalBus<{ key: string; value: any; expAt: number }>;
   }) {
     this.roomID = props.roomID;
-    this.ws = props.ws; 
+    this.ws = props.ws;
     this.actor = props.actor;
     this.token = props.token;
     this.cache = {};
@@ -117,13 +117,11 @@ export class InnerPresenceClient {
     value: T,
     exp?: number
   ): { [key: string]: T } {
-
-
     let addition = exp ? exp : 60;
     // Convert to unix + add seconds
     const expAt = Math.round(new Date().getTime() / 1000) + addition;
-    
-    this.bus.publish({key, value, expAt})
+
+    this.bus.publish({ key, value, expAt });
 
     this.sendPres(key, {
       room: this.roomID,

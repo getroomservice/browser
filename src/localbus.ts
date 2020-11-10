@@ -20,7 +20,7 @@ export class LocalBus<T> {
     return fn;
   }
 
-  private isPublishing: boolean = false
+  private isPublishing: boolean = false;
 
   publish(msg: T) {
     // This is an infinite loop
@@ -28,10 +28,10 @@ export class LocalBus<T> {
       throw errNoInfiniteLoop();
     }
 
-    this.isPublishing = true 
-    this.subs.forEach(fn => {
+    this.isPublishing = true;
+    this.subs.forEach((fn) => {
       fn(msg);
     });
-    this.isPublishing = false
+    this.isPublishing = false;
   }
 }

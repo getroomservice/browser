@@ -25,7 +25,7 @@ export default function Home() {
   function onChange(e) {
     if (!room) return;
     const map = room.map('loop');
-    room.subscribe(map, m => {
+    room.subscribe(map, (m) => {
       console.log('what');
       m.set('name', e.target.value);
     });

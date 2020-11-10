@@ -93,7 +93,7 @@ export default function Home() {
 
       const v = await p.getAll<Position>('position');
       setPositions(v);
-      return room.subscribe<Position>(p, 'position', msg => {
+      return room.subscribe<Position>(p, 'position', (msg) => {
         setPositions(msg);
       });
     }

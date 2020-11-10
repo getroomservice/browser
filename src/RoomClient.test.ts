@@ -59,7 +59,7 @@ test('RoomClient.connect() will send authenticate and connect messages', (done) 
   });
 });
 
-test("infinite loop bugs can be fixed with example", () => {
+test('infinite loop bugs can be fixed with example', () => {
   const conn = {
     onmessage: (_?: MessageEvent) => {},
     send: (_?: any) => {},
@@ -73,19 +73,18 @@ test("infinite loop bugs can be fixed with example", () => {
     conn: conn,
   });
 
-  const m = client.map("mymap")
-  let state = m
-  client.subscribe(m, nextMap => {
-    state = nextMap
-  })
-  state.set("dogs", "cats")
-  state.set('cats', "dogs") // Two loops are fine!
+  const m = client.map('mymap');
+  let state = m;
+  client.subscribe(m, (nextMap) => {
+    state = nextMap;
+  });
+  state.set('dogs', 'cats');
+  state.set('cats', 'dogs'); // Two loops are fine!
 
-  expect(state !== m).toBeTruthy()
-})
+  expect(state !== m).toBeTruthy();
+});
 
-test("we catch infinite loops", () => {
-
+test('we catch infinite loops', () => {
   function thisThrows() {
     const conn = {
       onmessage: (_?: MessageEvent) => {},
@@ -99,13 +98,13 @@ test("we catch infinite loops", () => {
       token: 'token',
       conn: conn,
     });
-    const m = client.map("mymap")
-    client.subscribe(m, nextMap => {
-      nextMap.set("I", "cause an infinite loop")
-    })
+    const m = client.map('mymap');
+    client.subscribe(m, (nextMap) => {
+      nextMap.set('I', 'cause an infinite loop');
+    });
 
-    m.set("I", "trigger the bad times")
+    m.set('I', 'trigger the bad times');
   }
 
-  expect(thisThrows).toThrow()
-})
+  expect(thisThrows).toThrow();
+});

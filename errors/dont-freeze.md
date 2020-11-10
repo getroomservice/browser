@@ -8,7 +8,7 @@ Some libraries, such as Recoil.js, will ["freeze"](https://developer.mozilla.org
 
 Some of Room Service's object's keep an internal cache necessary to prevent bugs and keep your code fast. In doing so, the object will occasionally need to update itself (`this.foobar = "..."`), and will break if frozen.
 
-## Ways to fix this
+## How to fix
 
 ### If you're using Recoil.js
 

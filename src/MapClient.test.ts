@@ -1,3 +1,4 @@
+import { LocalBus } from './localbus';
 import { InnerMapClient } from './MapClient';
 import SuperlumeWebSocket from './ws';
 import { WebSocketDocCmdMessage } from './wsMessages';
@@ -16,6 +17,8 @@ describe('InnerMapClient', () => {
     docID: 'doc',
     mapID: 'map',
     ws,
+    bus: new LocalBus(),
+    actor: 'actor',
   });
 
   test('has the correct id', () => {
@@ -60,7 +63,10 @@ describe('InnerMapClient', () => {
   });
 
   test('interprets mput', () => {
-    const val = map.set('dogs', 'good').set('snakes', 'snakey').toObject();
+    const val = map
+      .set('dogs', 'good')
+      .set('snakes', 'snakey')
+      .toObject();
 
     expect(val).toEqual({
       dogs: 'good',

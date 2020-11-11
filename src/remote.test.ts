@@ -21,7 +21,12 @@ test('Test fetchSession', async () => {
     };
   });
 
-  await fetchSession(fetcher as any, '123', '123');
+  await fetchSession(fetcher as any, {}, '123', '123');
 
-  expect(fetcher.mock.calls[0]).toEqual(['123']);
+  expect(fetcher.mock.calls[0]).toEqual([
+    {
+      ctx: {},
+      room: '123',
+    },
+  ]);
 });

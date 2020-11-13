@@ -1,21 +1,16 @@
 import SuperlumeWebSocket from './ws';
-import { Tombstone, ObjectClient, DocumentCheckpoint } from './types';
-import ReverseTree from './ReverseTree';
-import { unescape, escape } from './escape';
-import { unescapeID } from './util';
+import { ObjectClient, DocumentCheckpoint } from './types';
 import invariant from 'tiny-invariant';
 import { LocalBus } from './localbus';
+import { ListInterpreter, ListMeta, ListStore } from '@roomservice/core';
 
 export class InnerListClient<T extends any> implements ObjectClient {
   private roomID: string;
-  private docID: string;
   private ws: SuperlumeWebSocket;
-  private rt: ReverseTree;
   private bus: LocalBus<any>;
   private actor: string;
-
-  // Map indexes to item ids
-  private itemIDs: Array<string> = [];
+  private store: ListStore;
+  private meta: ListMeta;
 
   id: string;
 
@@ -29,28 +24,29 @@ export class InnerListClient<T extends any> implements ObjectClient {
     bus: LocalBus<{ args: string[]; from: string }>;
   }) {
     this.roomID = props.roomID;
-    this.docID = props.docID;
-    this.id = props.listID;
     this.ws = props.ws;
-    this.rt = new ReverseTree(props.actor);
     this.bus = props.bus;
     this.actor = props.actor;
+    this.id = props.listID;
+
+    const { meta, store } = ListInterpreter.newList(
+      props.docID,
+      props.listID,
+      props.actor
+    );
+    this.meta = meta;
+    this.store = store;
 
     invariant(
       props.checkpoint.lists[props.listID],
       `Unknown listid '${props.listID}' in checkpoint.`
     );
 
-    this.rt.import(props.checkpoint, props.listID);
-    const list = props.checkpoint.lists[props.listID];
-    const ids = list.ids || [];
-    for (let i = 0; i < ids.length; i++) {
-      const val = props.checkpoint.lists[props.listID].values[i];
-      if (typeof val === 'object' && val['t'] === '') {
-        continue; // skip tombstones
-      }
-      this.itemIDs.push(unescapeID(props.checkpoint, ids[i]));
-    }
+    ListInterpreter.importFromRawCheckpoint(
+      this.store,
+      props.checkpoint,
+      this.meta.listID
+    );
   }
 
   private sendCmd(cmd: string[]) {
@@ -74,98 +70,32 @@ export class InnerListClient<T extends any> implements ObjectClient {
   }
 
   dangerouslyUpdateClientDirectly(cmd: string[]): InnerListClient<T> {
-    if (cmd.length < 3) {
-      throw new Error('Unexpected command: ' + cmd);
-    }
-    const keyword = cmd[0];
-    const docID = cmd[1];
-    const id = cmd[2];
-
-    if (docID !== this.docID || id !== this.id) {
-      throw new Error('Command unexpectedly routed to the wrong client');
-    }
-
-    switch (keyword) {
-      case 'lins':
-        const insAfter = cmd[3];
-        const insItemID = cmd[4];
-        const insValue = cmd[5];
-        this.itemIDs.splice(
-          this.itemIDs.findIndex((f) => f === insAfter) + 1,
-          0,
-          insItemID
-        );
-        this.rt.insert(insAfter, insValue, insItemID);
-        break;
-      case 'lput':
-        const putItemID = cmd[3];
-        const putVal = cmd[4];
-        this.rt.put(putItemID, putVal);
-        break;
-      case 'ldel':
-        const delItemID = cmd[3];
-        this.rt.delete(delItemID);
-        this.itemIDs.splice(
-          this.itemIDs.findIndex((f) => f === delItemID),
-          1
-        );
-        break;
-      default:
-        throw new Error('Unexpected command keyword: ' + keyword);
-    }
+    ListInterpreter.validateCommand(this.meta, cmd);
+    ListInterpreter.applyCommand(this.store, cmd);
     return this.clone();
   }
 
   get(index: number): T | undefined {
-    let itemID = this.itemIDs[index];
-    if (!itemID) return undefined;
-
-    const val = this.rt.get(itemID);
-    if (!val) return undefined;
-    if (typeof val === 'object') {
-      if ((val as Tombstone).t === '') {
-        return undefined;
-      }
-      throw new Error('Unimplemented references');
-    }
-
-    return unescape(val) as T;
+    return ListInterpreter.get<T>(this.store, index);
   }
 
   set(index: number, val: T): InnerListClient<T> {
-    let itemID = this.itemIDs[index];
-    if (!itemID) {
-      throw new Error(
-        `Index '${index}' doesn't already exist. Try .push() or .insertAfter() instead.`
-      );
-    }
-    const escaped = escape(val as any);
-
-    // Local
-    this.rt.put(itemID, escaped);
+    const cmd = ListInterpreter.runSet(this.store, this.meta, index, val);
 
     // Remote
-    this.sendCmd(['lput', this.docID, this.id, itemID, escaped]);
+    this.sendCmd(cmd);
 
     return this.clone();
   }
 
   delete(index: number): InnerListClient<T> {
-    if (this.itemIDs.length === 0) {
+    const cmd = ListInterpreter.runDelete(this.store, this.meta, index);
+    if (!cmd) {
       return this.clone();
     }
-    let itemID = this.itemIDs[index];
-    if (!itemID) {
-      console.warn('Unknown index: ', index, this.itemIDs);
-      return this.clone() as InnerListClient<T>;
-    }
-
-    // Local
-    this.rt.delete(itemID);
-    this.itemIDs.splice(index, 1);
 
     // Remote
-    this.sendCmd(['ldel', this.docID, this.id, itemID]);
+    this.sendCmd(cmd);
 
     return this.clone();
   }
@@ -175,62 +105,29 @@ export class InnerListClient<T extends any> implements ObjectClient {
   }
 
   insertAt(index: number, val: T): InnerListClient<T> {
-    if (index < 0) {
-      throw 'negative indices unsupported';
-    }
-    let afterID: string;
-    if (index == 0) {
-      afterID = 'root';
-    } else {
-      afterID = this.itemIDs[index - 1];
-    }
-
-    if (!afterID) {
-      throw new RangeError(`List '${this.id}' has no index: '${index}'`);
-    }
-    const escaped = escape(val as any);
-
-    // Local
-    const itemID = this.rt.insert(afterID, escaped);
-    this.itemIDs.splice(index, 0, itemID);
+    const cmd = ListInterpreter.runInsertAt(this.store, this.meta, index, val);
 
     // Remote
-    this.sendCmd(['lins', this.docID, this.id, afterID, itemID, escaped]);
-
-    return this.clone();
-  }
-
-  private pushOne(val: T): InnerListClient<T> {
-    let lastID = this.rt.lastID();
-    const escaped = escape(val as any);
-
-    // Local
-    const itemID = this.rt.insert(lastID, escaped);
-    this.itemIDs.push(itemID);
-
-    // Remote
-    this.sendCmd(['lins', this.docID, this.id, lastID, itemID, escaped]);
+    this.sendCmd(cmd);
 
     return this.clone();
   }
 
   push(...args: T[]): InnerListClient<T> {
-    let self;
-    for (let arg of args) {
-      self = this.pushOne(arg);
+    const cmds = ListInterpreter.runPush(this.store, this.meta, ...args);
+
+    for (let cmd of cmds) {
+      this.sendCmd(cmd);
     }
-    return self as InnerListClient<T>;
+
+    return this as InnerListClient<T>;
   }
 
   map<T extends any>(fn: (val: T, index: number, key: string) => T[]): T[] {
-    return this.rt
-      .preOrderTraverse()
-      .map((idValue, i) =>
-        fn(unescape(idValue.value) as T, i, idValue.id)
-      ) as Array<T>;
+    return ListInterpreter.map(this.store, fn);
   }
 
   toArray(): T[] {
-    return this.rt.toArray().map((m) => unescape(m)) as any[];
+    return ListInterpreter.toArray(this.store);
   }
 }

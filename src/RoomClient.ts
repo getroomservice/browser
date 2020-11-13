@@ -288,7 +288,7 @@ export class RoomClient {
     });
 
     const m = new InnerMapClient<T>({
-      checkpoint: this.checkpoint.maps[name] || {},
+      checkpoint: this.checkpoint,
       roomID: this.roomID,
       docID: this.docID,
       mapID: name,

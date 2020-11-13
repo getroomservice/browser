@@ -1068,6 +1068,13 @@
     estree-walker "^1.0.1"
     picomatch "^2.2.2"
 
+"@roomservice/core@0.2.0":
+  version "0.2.0"
+  resolved "https://registry.yarnpkg.com/@roomservice/core/-/core-0.2.0.tgz#6ac3376d95b39ad91709b074a31a5026f362e792"
+  integrity sha512-85r9PjDIy1+7I3J8ni6Vkd2gCoiYbjjxijtDc1g6FMPBIE4IV13x3tOYNb00OClhmXJuIgWtBiGxONN9J37qdA==
+  dependencies:
+    tiny-invariant "^1.1.0"
+
 "@types/babel__core@^7.1.0":
   version "7.1.9"
   resolved "https://registry.yarnpkg.com/@types/babel__core/-/babel__core-7.1.9.tgz#77e59d438522a6fb898fa43dc3455c6e72f3963d"

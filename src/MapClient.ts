@@ -1,20 +1,24 @@
-import { ObjectClient, MapCheckpoint } from './types';
+import { ObjectClient } from './types';
 import SuperlumeWebSocket from './ws';
-import { escape, unescape } from './escape';
-import { LocalBus } from 'localbus';
+import { LocalBus } from './localbus';
+import {
+  MapMeta,
+  MapStore,
+  MapInterpreter,
+  DocumentCheckpoint,
+} from '@roomservice/core';
 
 export class InnerMapClient<T extends any> implements ObjectClient {
   private roomID: string;
-  private docID: string;
   private ws: SuperlumeWebSocket;
-  private store: { [key: string]: number | string | object | T };
+
+  private meta: MapMeta;
+  private store: MapStore<T>;
   private bus: LocalBus<any>;
   private actor: string;
 
-  id: string;
-
   constructor(props: {
-    checkpoint: MapCheckpoint;
+    checkpoint: DocumentCheckpoint;
     roomID: string;
     docID: string;
     mapID: string;
@@ -23,20 +27,23 @@ export class InnerMapClient<T extends any> implements ObjectClient {
     bus: LocalBus<{ from: string; args: string[] }>;
   }) {
     this.roomID = props.roomID;
-    this.docID = props.docID;
-    this.id = props.mapID;
     this.ws = props.ws;
-    this.store = {};
     this.bus = props.bus;
     this.actor = props.actor;
 
-    // import
-    for (let k in props.checkpoint) {
-      const val = props.checkpoint[k];
-      if (typeof val === 'string') {
-        this.store[k] = unescape(val);
-      }
-    }
+    const { store, meta } = MapInterpreter.newMap<T>(props.docID, props.mapID);
+    this.store = store;
+    this.meta = meta;
+
+    MapInterpreter.importFromRawCheckpoint(
+      this.store,
+      props.checkpoint,
+      this.meta.mapID
+    );
+  }
+
+  public get id(): string {
+    return this.meta.mapID;
   }
 
   private sendCmd(cmd: string[]) {
@@ -59,39 +66,8 @@ export class InnerMapClient<T extends any> implements ObjectClient {
   }
 
   dangerouslyUpdateClientDirectly(cmd: string[]): InnerMapClient<T> {
-    if (cmd.length < 3) {
-      throw new Error('Unexpected command: ' + cmd);
-    }
-    const keyword = cmd[0];
-    const docID = cmd[1];
-    const id = cmd[2];
-
-    if (docID !== this.docID || id !== this.id) {
-      throw new Error('Command unexpectedly routed to the wrong client');
-    }
-
-    switch (keyword) {
-      case 'mput':
-        if (cmd.length !== 5) {
-          console.error('Malformed command ', cmd);
-          break;
-        }
-        const putKey = cmd[3];
-        const putVal = cmd[4];
-        this.store[putKey] = unescape(putVal);
-        break;
-      case 'mdel':
-        if (cmd.length !== 4) {
-          console.error('Malformed command ', cmd);
-          break;
-        }
-        const delKey = cmd[3];
-        delete this.store[delKey];
-        break;
-      default:
-        throw new Error('Unexpected command keyword: ' + keyword);
-    }
-
+    MapInterpreter.validateCommand(this.meta, cmd);
+    MapInterpreter.applyCommand(this.store, cmd);
     return this.clone();
   }
 
@@ -104,13 +80,10 @@ export class InnerMapClient<T extends any> implements ObjectClient {
   }
 
   set(key: string, value: T): InnerMapClient<T> {
-    const escaped = escape(value as any);
-
-    // Local
-    this.store[key] = value;
+    const cmd = MapInterpreter.runSet(this.store, this.meta, key, value);
 
     // Remote
-    this.sendCmd(['mput', this.docID, this.id, key, escaped]);
+    this.sendCmd(cmd);
 
     return this.clone();
   }
@@ -124,11 +97,10 @@ export class InnerMapClient<T extends any> implements ObjectClient {
   }
 
   delete(key: string): InnerMapClient<T> {
-    // local
-    delete this.store[key];
+    const cmd = MapInterpreter.runDelete(this.store, this.meta, key);
 
     // remote
-    this.sendCmd(['mdel', this.docID, this.id, key]);
+    this.sendCmd(cmd);
 
     return this.clone();
   }

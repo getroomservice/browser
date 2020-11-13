@@ -12,7 +12,10 @@ describe('InnerMapClient', () => {
   });
 
   const map = new InnerMapClient({
-    checkpoint: {},
+    // @ts-ignore
+    checkpoint: {
+      maps: {},
+    },
     roomID: 'room',
     docID: 'doc',
     mapID: 'map',

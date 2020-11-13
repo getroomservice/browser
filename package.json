@@ -40,6 +40,7 @@
     "typescript": "^3.8.3"
   },
   "dependencies": {
+    "@roomservice/core": "0.2.0",
     "tiny-invariant": "^1.1.0"
   }
 }

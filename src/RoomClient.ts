@@ -10,7 +10,7 @@ import { InnerListClient } from './ListClient';
 import { InnerMapClient } from './MapClient';
 import { InnerPresenceClient } from './PresenceClient';
 import invariant from 'tiny-invariant';
-import { isOlderVS } from './versionstamp';
+import { vsReader } from '@roomservice/core';
 import {
   WebSocketPresenceFwdMessage,
   WebSocketServerMessage,
@@ -76,6 +76,8 @@ export class RoomClient {
     this.checkpoint = params.checkpoint;
     this.InnerPresenceClient = undefined;
 
+    const vs = vsReader(window.atob);
+
     this.ws.bind('doc:fwd', (body) => {
       if (body.room !== this.roomID) return;
       if (!body.args || body.args.length < 3) {
@@ -85,7 +87,7 @@ export class RoomClient {
         return;
       }
       // Ignore version stamps older than checkpoint
-      if (isOlderVS(body.vs, this.checkpoint.vs)) return;
+      if (vs.isOlderVS(body.vs, this.checkpoint.vs)) return;
 
       // Ignore validated commands
       if (body.from === this.actor) return;

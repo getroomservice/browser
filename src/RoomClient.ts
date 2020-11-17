@@ -138,7 +138,7 @@ export class RoomClient {
     const updatedClient = client.dangerouslyUpdateClientDirectly(body.args);
 
     for (const cb of this.mapCallbacksByObjID[objID] || []) {
-      cb(updatedClient, body.from);
+      cb(updatedClient.toObject(), body.from);
     }
   }
 
@@ -151,7 +151,7 @@ export class RoomClient {
     const updatedClient = client.dangerouslyUpdateClientDirectly(body.args);
 
     for (const cb of this.listCallbacksByObjID[objID] || []) {
-      cb(updatedClient, body.from);
+      cb(updatedClient.toArray(), body.from);
     }
   }
 
@@ -356,19 +356,19 @@ export class RoomClient {
 
   subscribe<T>(
     list: ListClient<T>,
-    onChangeFn: (list: ListClient<T>) => any
+    onChangeFn: (list: T[]) => any
   ): ListenerBundle;
   subscribe<T>(
     list: ListClient<T>,
-    onChangeFn: (list: ListClient<T>, from: string) => any
+    onChangeFn: (list: T[], from: string) => any
   ): ListenerBundle;
   subscribe<T>(
     map: MapClient<T>,
-    onChangeFn: (map: MapClient<T>) => {}
+    onChangeFn: (map: { [key: string]: T }) => {}
   ): ListenerBundle;
   subscribe<T>(
     map: MapClient<T>,
-    onChangeFn: (map: MapClient<T>, from: string) => any
+    onChangeFn: (map: { [key: string]: T }, from: string) => any
   ): ListenerBundle;
   subscribe<T extends any>(
     presence: PresenceClient,

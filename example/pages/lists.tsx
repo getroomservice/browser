@@ -4,8 +4,9 @@ import { useEffect, useState } from 'react';
 function useList(
   roomName: string,
   listName: string
-): [ListClient<any>, (l: ListClient<any>) => void] {
+): [Array<any>, ListClient<any>] {
   const [list, setList] = useState<ListClient<any>>();
+  const [json, setJSON] = useState([]);
 
   useEffect(() => {
     async function load() {
@@ -13,31 +14,32 @@ function useList(
         auth: '/api/hello',
       });
       const room = await client.room(roomName);
-      const l = await room.list(listName);
+      const l = room.list(listName);
       setList(l);
+      setJSON(l.toArray());
 
-      room.subscribe(l, (li) => {
-        setList(li);
+      room.subscribe(l, (arr) => {
+        setJSON(arr);
       });
     }
     load();
   }, []);
 
-  return [list, setList];
+  return [json, list];
 }
 
 export default function List() {
-  const [list, setList] = useList('lists', 'todos');
+  const [value, list] = useList('lists', 'todos');
   const [text, setText] = useState('');
 
   function onCheckOff(i: number) {
     if (!list) return;
-    setList(list.delete(i));
+    list.delete(i);
   }
 
   function onEnterPress() {
     if (!list) return;
-    setList(list.push(text));
+    list.push(text);
     setText('');
   }
 
@@ -54,18 +56,17 @@ export default function List() {
           }
         }}
       />
-      {list &&
-        list.toArray().map((l, i) => (
-          <p
-            className="todo"
-            key={JSON.stringify(l) + '-' + i}
-            onClick={() => onCheckOff(i)}
-          >
-            {l.object || l}
-            {'-'}
-            {i}
-          </p>
-        ))}
+      {value.map((l, i) => (
+        <p
+          className="todo"
+          key={JSON.stringify(l) + '-' + i}
+          onClick={() => onCheckOff(i)}
+        >
+          {l.object || l}
+          {'-'}
+          {i}
+        </p>
+      ))}
       <style jsx>{`
         .container {
           margin: 0 auto;

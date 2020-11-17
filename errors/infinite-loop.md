@@ -10,24 +10,20 @@ For example, this code throws an "Infinite loop detected" error:
 
 ```tsx
 // This is causes an infinite loop
-room.subscribe(map, (nextMap) => {
-  nextMap.set('name', 'joe');
+room.subscribe(map, (json) => {
+  map.set('name', 'joe');
 });
 ```
 
 ## How to fix
 
-Ensure you're not making updates inside of subscription functions. Instead, store the state somewhere else, and then update it.
-
-For example:
+Ensure you're not making updates inside of subscription functions. For example:
 
 ```tsx
-// This does not cause an infinite loop
-let state = map;
-
-room.subscribe(map, (nextMap) => {
-  state = nextMap;
+room.subscribe(map, (json) => {
+  // ...
 });
 
+// This does not cause an infinite loop
 nextMap.set('name', 'joe');
 ```

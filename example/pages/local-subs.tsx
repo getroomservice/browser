@@ -31,22 +31,22 @@ function Input(props) {
 }
 
 function ViewPort(props) {
-  const [map, setMap] = useState() as any;
+  const [state, setState] = useState({ name: '' });
   const room = useRoom(props.roomName);
   const counts = useRef(0);
 
   useEffect(() => {
     if (!room) return;
     const map = room.map(props.mapName);
-    setMap(map);
-    room.subscribe(map, (nextMap) => {
+    setState(map.toObject());
+    room.subscribe(map, (json) => {
       counts.current++;
       console.log(counts.current);
-      setMap(nextMap);
+      setState(json);
     });
   }, [room]);
 
-  return <div>{map && map.get('name')}</div>;
+  return <div>{state.name || ''}</div>;
 }
 
 export default function Home() {

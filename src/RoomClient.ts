@@ -244,7 +244,10 @@ export class RoomClient {
   private createListLocally<T extends any>(name: string) {
     const bus = new LocalBus<DispatchDocCmdMsg>();
     bus.subscribe((body) => {
-      this.dispatchListCmd(name, body);
+      const client = this.listClients[name];
+      for (const cb of this.listCallbacksByObjID[name] || []) {
+        cb(client.toArray(), body.from);
+      }
     });
 
     const l = new InnerListClient<T>({
@@ -286,7 +289,10 @@ export class RoomClient {
   private createMapLocally<T extends any>(name: string) {
     const bus = new LocalBus<DispatchDocCmdMsg>();
     bus.subscribe((body) => {
-      this.dispatchMapCmd(name, body);
+      const client = this.mapClients[name];
+      for (const cb of this.mapCallbacksByObjID[name] || []) {
+        cb(client.toObject(), body.from);
+      }
     });
 
     const m = new InnerMapClient<T>({

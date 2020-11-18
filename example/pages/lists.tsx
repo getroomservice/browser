@@ -29,7 +29,7 @@ function useList(
 }
 
 export default function List() {
-  const [value, list] = useList('lists', 'todos');
+  const [value, list] = useList('lists17', 'todos');
   const [text, setText] = useState('');
 
   function onCheckOff(i: number) {

@@ -4,7 +4,7 @@ import invariant from 'tiny-invariant';
 import { LocalBus } from './localbus';
 import { ListInterpreter, ListMeta, ListStore } from '@roomservice/core';
 
-type ListObject = Array<any>;
+export type ListObject = Array<any>;
 
 export class InnerListClient<T extends ListObject> implements ObjectClient {
   private roomID: string;

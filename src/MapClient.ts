@@ -8,7 +8,7 @@ import {
   DocumentCheckpoint,
 } from '@roomservice/core';
 
-type MapObject = { [key: string]: any };
+export type MapObject = { [key: string]: any };
 
 export class InnerMapClient<T extends MapObject> implements ObjectClient {
   private roomID: string;

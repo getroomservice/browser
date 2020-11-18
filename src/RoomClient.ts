@@ -6,8 +6,8 @@ import {
   Prop,
 } from './types';
 import { fetchSession, fetchDocument } from './remote';
-import { InnerListClient } from './ListClient';
-import { InnerMapClient } from './MapClient';
+import { InnerListClient, ListObject } from './ListClient';
+import { InnerMapClient, MapObject } from './MapClient';
 import { InnerPresenceClient } from './PresenceClient';
 import invariant from 'tiny-invariant';
 import { vsReader } from '@roomservice/core';
@@ -32,8 +32,11 @@ type ListenerBundle = Array<Listener>;
 
 type InternalFunctions = 'dangerouslyUpdateClientDirectly';
 type Omit<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>>;
-export type MapClient<T> = Omit<InnerMapClient<T>, InternalFunctions | 'id'>;
-export type ListClient<T> = Omit<
+export type MapClient<T extends MapObject> = Omit<
+  InnerMapClient<T>,
+  InternalFunctions | 'id'
+>;
+export type ListClient<T extends ListObject> = Omit<
   InnerListClient<T>,
   'dangerouslyUpdateClientDirectly' | 'id'
 >;
@@ -115,7 +118,7 @@ export class RoomClient {
 
     this.ws.bind('room:rm_guest', (body) => {
       if (body.room !== this.roomID) return;
-      const client = this.presence() as InnerPresenceClient;
+      const client = this.presence('_____any') as InnerPresenceClient;
 
       const newClient = client.dangerouslyUpdateClientDirectly(
         'room:rm_guest',
@@ -159,7 +162,7 @@ export class RoomClient {
     if (body.room !== this.roomID) return;
     if (body.from === this.actor) return;
 
-    const client = this.presence() as InnerPresenceClient;
+    const client = this.presence(body.key) as InnerPresenceClient;
     const key = body.key;
 
     const now = new Date().getTime() / 1000;
@@ -241,7 +244,7 @@ export class RoomClient {
     return this.actor;
   }
 
-  private createListLocally<T extends any>(name: string) {
+  private createListLocally<T extends ListObject>(name: string) {
     const bus = new LocalBus<DispatchDocCmdMsg>();
     bus.subscribe((body) => {
       const client = this.listClients[name];
@@ -263,7 +266,7 @@ export class RoomClient {
     return l;
   }
 
-  list<T extends any>(name: string): ListClient<T> {
+  list<T extends ListObject>(name: string): ListClient<T> {
     if (this.listClients[name]) {
       return this.listClients[name];
     }
@@ -286,7 +289,7 @@ export class RoomClient {
     return this.createListLocally(name);
   }
 
-  private createMapLocally<T extends any>(name: string) {
+  private createMapLocally<T extends MapObject>(name: string) {
     const bus = new LocalBus<DispatchDocCmdMsg>();
     bus.subscribe((body) => {
       const client = this.mapClients[name];
@@ -308,7 +311,7 @@ export class RoomClient {
     return m;
   }
 
-  map<T extends any>(name: string): MapClient<T> {
+  map<T extends MapObject>(name: string): MapClient<T> {
     if (this.mapClients[name]) {
       return this.mapClients[name];
     }
@@ -324,7 +327,7 @@ export class RoomClient {
     return this.createMapLocally(name);
   }
 
-  presence(): PresenceClient {
+  presence(key: string): PresenceClient {
     if (this.InnerPresenceClient) {
       return this.InnerPresenceClient;
     }
@@ -345,6 +348,7 @@ export class RoomClient {
       actor: this.actor,
       token: this.token,
       bus,
+      key: key,
     });
     try {
       this.InnerPresenceClient = p;
@@ -360,21 +364,21 @@ export class RoomClient {
   private listCallbacksByObjID: { [key: string]: Array<Function> } = {};
   private presenceCallbacksByKey: { [key: string]: Array<Function> } = {};
 
-  subscribe<T>(
+  subscribe<T extends ListObject>(
     list: ListClient<T>,
-    onChangeFn: (list: T[]) => any
+    onChangeFn: (list: T) => any
   ): ListenerBundle;
-  subscribe<T>(
+  subscribe<T extends ListObject>(
     list: ListClient<T>,
-    onChangeFn: (list: T[], from: string) => any
+    onChangeFn: (list: T, from: string) => any
   ): ListenerBundle;
-  subscribe<T>(
+  subscribe<T extends MapObject>(
     map: MapClient<T>,
-    onChangeFn: (map: { [key: string]: T }) => {}
+    onChangeFn: (map: T) => {}
   ): ListenerBundle;
-  subscribe<T>(
+  subscribe<T extends MapObject>(
     map: MapClient<T>,
-    onChangeFn: (map: { [key: string]: T }, from: string) => any
+    onChangeFn: (map: T, from: string) => any
   ): ListenerBundle;
   subscribe<T extends any>(
     presence: PresenceClient,

@@ -8,12 +8,14 @@ import {
   DocumentCheckpoint,
 } from '@roomservice/core';
 
-export class InnerMapClient<T extends any> implements ObjectClient {
+type MapObject = { [key: string]: any };
+
+export class InnerMapClient<T extends MapObject> implements ObjectClient {
   private roomID: string;
   private ws: SuperlumeWebSocket;
 
   private meta: MapMeta;
-  private store: MapStore<T>;
+  private store: MapStore<any>;
   private bus: LocalBus<any>;
   private actor: string;
 
@@ -75,12 +77,12 @@ export class InnerMapClient<T extends any> implements ObjectClient {
     return Object.keys(this.store);
   }
 
-  get(key: string): T {
-    return this.store[key] as T;
+  get<K extends keyof T>(key: K): T {
+    return this.store[key as any] as T;
   }
 
-  set(key: string, value: T): InnerMapClient<T> {
-    const cmd = MapInterpreter.runSet(this.store, this.meta, key, value);
+  set<K extends keyof T>(key: K, value: T[K]): InnerMapClient<T> {
+    const cmd = MapInterpreter.runSet(this.store, this.meta, key as any, value);
 
     // Remote
     this.sendCmd(cmd);
@@ -96,8 +98,8 @@ export class InnerMapClient<T extends any> implements ObjectClient {
     return obj;
   }
 
-  delete(key: string): InnerMapClient<T> {
-    const cmd = MapInterpreter.runDelete(this.store, this.meta, key);
+  delete<K extends keyof T>(key: K): InnerMapClient<T> {
+    const cmd = MapInterpreter.runDelete(this.store, this.meta, key as any);
 
     // remote
     this.sendCmd(cmd);

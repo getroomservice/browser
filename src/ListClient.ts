@@ -4,7 +4,9 @@ import invariant from 'tiny-invariant';
 import { LocalBus } from './localbus';
 import { ListInterpreter, ListMeta, ListStore } from '@roomservice/core';
 
-export class InnerListClient<T extends any> implements ObjectClient {
+type ListObject = Array<any>;
+
+export class InnerListClient<T extends ListObject> implements ObjectClient {
   private roomID: string;
   private ws: SuperlumeWebSocket;
   private bus: LocalBus<any>;
@@ -75,12 +77,17 @@ export class InnerListClient<T extends any> implements ObjectClient {
     return this.clone();
   }
 
-  get(index: number): T | undefined {
-    return ListInterpreter.get<T>(this.store, index);
+  get<K extends keyof T>(index: K): T | undefined {
+    return ListInterpreter.get<T>(this.store, index as any);
   }
 
-  set(index: number, val: T): InnerListClient<T> {
-    const cmd = ListInterpreter.runSet(this.store, this.meta, index, val);
+  set<K extends keyof T>(index: K, val: T[K]): InnerListClient<T> {
+    const cmd = ListInterpreter.runSet(
+      this.store,
+      this.meta,
+      index as any,
+      val
+    );
 
     // Remote
     this.sendCmd(cmd);
@@ -88,8 +95,8 @@ export class InnerListClient<T extends any> implements ObjectClient {
     return this.clone();
   }
 
-  delete(index: number): InnerListClient<T> {
-    const cmd = ListInterpreter.runDelete(this.store, this.meta, index);
+  delete<K extends keyof T>(index: K): InnerListClient<T> {
+    const cmd = ListInterpreter.runDelete(this.store, this.meta, index as any);
     if (!cmd) {
       return this.clone();
     }
@@ -100,12 +107,17 @@ export class InnerListClient<T extends any> implements ObjectClient {
     return this.clone();
   }
 
-  insertAfter(index: number, val: T): InnerListClient<T> {
-    return this.insertAt(index + 1, val);
+  insertAfter<K extends keyof T>(index: K, val: T[K]): InnerListClient<T> {
+    return this.insertAt((index as number) + 1, val as any);
   }
 
-  insertAt(index: number, val: T): InnerListClient<T> {
-    const cmd = ListInterpreter.runInsertAt(this.store, this.meta, index, val);
+  insertAt<K extends keyof T>(index: K, val: T[K]): InnerListClient<T> {
+    const cmd = ListInterpreter.runInsertAt(
+      this.store,
+      this.meta,
+      index as number,
+      val
+    );
 
     // Remote
     this.sendCmd(cmd);
@@ -113,7 +125,7 @@ export class InnerListClient<T extends any> implements ObjectClient {
     return this.clone();
   }
 
-  push(...args: T[]): InnerListClient<T> {
+  push<K extends keyof T>(...args: Array<T[K]>): InnerListClient<T> {
     const cmds = ListInterpreter.runPush(this.store, this.meta, ...args);
 
     for (let cmd of cmds) {
@@ -123,7 +135,9 @@ export class InnerListClient<T extends any> implements ObjectClient {
     return this as InnerListClient<T>;
   }
 
-  map<T extends any>(fn: (val: T, index: number, key: string) => T[]): T[] {
+  map<K extends keyof T>(
+    fn: (val: T[K], index: number, key: string) => Array<T[K]>
+  ): Array<T[K]> {
     return ListInterpreter.map(this.store, fn);
   }
 

@@ -77,11 +77,11 @@ export class InnerListClient<T extends ListObject> implements ObjectClient {
     return this.clone();
   }
 
-  get<K extends keyof T>(index: K): T | undefined {
+  get<K extends number>(index: K): T[K] | undefined {
     return ListInterpreter.get<T>(this.store, index as any);
   }
 
-  set<K extends keyof T>(index: K, val: T[K]): InnerListClient<T> {
+  set<K extends number>(index: K, val: T[K]): InnerListClient<T> {
     const cmd = ListInterpreter.runSet(
       this.store,
       this.meta,
@@ -95,7 +95,7 @@ export class InnerListClient<T extends ListObject> implements ObjectClient {
     return this.clone();
   }
 
-  delete<K extends keyof T>(index: K): InnerListClient<T> {
+  delete<K extends number>(index: K): InnerListClient<T> {
     const cmd = ListInterpreter.runDelete(this.store, this.meta, index as any);
     if (!cmd) {
       return this.clone();
@@ -107,11 +107,11 @@ export class InnerListClient<T extends ListObject> implements ObjectClient {
     return this.clone();
   }
 
-  insertAfter<K extends keyof T>(index: K, val: T[K]): InnerListClient<T> {
+  insertAfter<K extends number>(index: K, val: T[K]): InnerListClient<T> {
     return this.insertAt((index as number) + 1, val as any);
   }
 
-  insertAt<K extends keyof T>(index: K, val: T[K]): InnerListClient<T> {
+  insertAt<K extends number>(index: K, val: T[K]): InnerListClient<T> {
     const cmd = ListInterpreter.runInsertAt(
       this.store,
       this.meta,
@@ -125,7 +125,7 @@ export class InnerListClient<T extends ListObject> implements ObjectClient {
     return this.clone();
   }
 
-  push<K extends keyof T>(...args: Array<T[K]>): InnerListClient<T> {
+  push<K extends number>(...args: Array<T[K]>): InnerListClient<T> {
     const cmds = ListInterpreter.runPush(this.store, this.meta, ...args);
 
     for (let cmd of cmds) {
@@ -135,10 +135,10 @@ export class InnerListClient<T extends ListObject> implements ObjectClient {
     return this as InnerListClient<T>;
   }
 
-  map<K extends keyof T>(
-    fn: (val: T[K], index: number, key: string) => Array<T[K]>
+  map<K extends keyof T, V extends T[K]>(
+    fn: (val: V, index: K, key: string) => Array<T[K]>
   ): Array<T[K]> {
-    return ListInterpreter.map(this.store, fn);
+    return ListInterpreter.map(this.store, fn as any);
   }
 
   toArray(): T[] {

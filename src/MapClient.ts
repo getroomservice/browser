@@ -77,8 +77,8 @@ export class InnerMapClient<T extends MapObject> implements ObjectClient {
     return Object.keys(this.store);
   }
 
-  get<K extends keyof T>(key: K): T {
-    return this.store[key as any] as T;
+  get<K extends keyof T>(key: K): T[K] {
+    return this.store[key as any] as T[K];
   }
 
   set<K extends keyof T>(key: K, value: T[K]): InnerMapClient<T> {
@@ -90,8 +90,8 @@ export class InnerMapClient<T extends MapObject> implements ObjectClient {
     return this.clone();
   }
 
-  toObject(): { [key: string]: T } {
-    const obj = {} as { [key: string]: T };
+  toObject(): T {
+    const obj = {} as any;
     for (let key of this.keys) {
       obj[key] = this.get(key);
     }

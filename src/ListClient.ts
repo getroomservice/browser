@@ -4,9 +4,7 @@ import invariant from 'tiny-invariant';
 import { LocalBus } from './localbus';
 import { ListInterpreter, ListMeta, ListStore } from '@roomservice/core';
 
-export type ListObject = Array<any>;
-
-export class InnerListClient<T extends ListObject> implements ObjectClient {
+export class InnerListClient<T extends any> implements ObjectClient {
   private roomID: string;
   private ws: SuperlumeWebSocket;
   private bus: LocalBus<any>;
@@ -77,11 +75,11 @@ export class InnerListClient<T extends ListObject> implements ObjectClient {
     return this.clone();
   }
 
-  get<K extends number>(index: K): T[K] | undefined {
+  get<K extends number>(index: K): T | undefined {
     return ListInterpreter.get<T>(this.store, index as any);
   }
 
-  set<K extends number>(index: K, val: T[K]): InnerListClient<T> {
+  set<K extends number>(index: K, val: T): InnerListClient<T> {
     const cmd = ListInterpreter.runSet(
       this.store,
       this.meta,
@@ -107,11 +105,11 @@ export class InnerListClient<T extends ListObject> implements ObjectClient {
     return this.clone();
   }
 
-  insertAfter<K extends number>(index: K, val: T[K]): InnerListClient<T> {
+  insertAfter<K extends number>(index: K, val: T): InnerListClient<T> {
     return this.insertAt((index as number) + 1, val as any);
   }
 
-  insertAt<K extends number>(index: K, val: T[K]): InnerListClient<T> {
+  insertAt<K extends number>(index: K, val: T): InnerListClient<T> {
     const cmd = ListInterpreter.runInsertAt(
       this.store,
       this.meta,
@@ -125,7 +123,7 @@ export class InnerListClient<T extends ListObject> implements ObjectClient {
     return this.clone();
   }
 
-  push<K extends number>(...args: Array<T[K]>): InnerListClient<T> {
+  push(...args: Array<T>): InnerListClient<T> {
     const cmds = ListInterpreter.runPush(this.store, this.meta, ...args);
 
     for (let cmd of cmds) {

@@ -108,7 +108,7 @@ export class InnerListClient<T extends ListObject> implements ObjectClient {
   }
 
   insertAfter<K extends number>(index: K, val: T[K]): InnerListClient<T> {
-    return this.insertAt((index as number) + 1, val as any);
+    return this.insertAt((index as number) + 1, val);
   }
 
   insertAt<K extends number>(index: K, val: T[K]): InnerListClient<T> {
@@ -135,13 +135,13 @@ export class InnerListClient<T extends ListObject> implements ObjectClient {
     return this as InnerListClient<T>;
   }
 
-  map<K extends keyof T, V extends T[K]>(
-    fn: (val: V, index: K, key: string) => Array<T[K]>
+  map<K extends number>(
+    fn: (val: T[K], index: number, key: string) => Array<T[number]>
   ): Array<T[K]> {
-    return ListInterpreter.map(this.store, fn as any);
+    return ListInterpreter.map(this.store, fn);
   }
 
   toArray(): T[] {
-    return ListInterpreter.toArray(this.store);
+    return ListInterpreter.toArray<T[number]>(this.store);
   }
 }

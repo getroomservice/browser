@@ -6,7 +6,7 @@ import {
   Prop,
 } from './types';
 import { fetchSession, fetchDocument } from './remote';
-import { InnerListClient } from './ListClient';
+import { InnerListClient, ListObject } from './ListClient';
 import { InnerMapClient, MapObject } from './MapClient';
 import { InnerPresenceClient } from './PresenceClient';
 import invariant from 'tiny-invariant';
@@ -36,7 +36,7 @@ export type MapClient<T extends MapObject> = Omit<
   InnerMapClient<T>,
   InternalFunctions | 'id'
 >;
-export type ListClient<T extends any> = Omit<
+export type ListClient<T extends ListObject> = Omit<
   InnerListClient<T>,
   'dangerouslyUpdateClientDirectly' | 'id'
 >;
@@ -244,7 +244,7 @@ export class RoomClient {
     return this.actor;
   }
 
-  private createListLocally<T extends any>(name: string) {
+  private createListLocally<T extends ListObject>(name: string) {
     const bus = new LocalBus<DispatchDocCmdMsg>();
     bus.subscribe((body) => {
       const client = this.listClients[name];
@@ -266,7 +266,7 @@ export class RoomClient {
     return l;
   }
 
-  list<T extends any>(name: string): ListClient<T> {
+  list<T extends ListObject>(name: string): ListClient<T> {
     if (this.listClients[name]) {
       return this.listClients[name];
     }
@@ -364,13 +364,13 @@ export class RoomClient {
   private listCallbacksByObjID: { [key: string]: Array<Function> } = {};
   private presenceCallbacksByKey: { [key: string]: Array<Function> } = {};
 
-  subscribe<T extends any>(
+  subscribe<T extends ListObject>(
     list: ListClient<T>,
-    onChangeFn: (list: T[]) => any
+    onChangeFn: (list: T) => any
   ): ListenerBundle;
-  subscribe<T extends any>(
+  subscribe<T extends ListObject>(
     list: ListClient<T>,
-    onChangeFn: (list: T[], from: string) => any
+    onChangeFn: (list: T, from: string) => any
   ): ListenerBundle;
   subscribe<T extends MapObject>(
     map: MapClient<T>,

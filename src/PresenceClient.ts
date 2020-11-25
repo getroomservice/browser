@@ -14,14 +14,12 @@ export class InnerPresenceClient {
   private ws: SuperlumeWebSocket;
   private actor: string;
   private token: string;
-  private key: string;
   private cache: { [key: string]: PresenceCheckpoint<any> };
   private sendPres: (key: string, args: any) => any;
   private bus: LocalBus<{ key: string; value: any; expAt: number }>;
 
   constructor(props: {
     roomID: string;
-    key: string;
     ws: SuperlumeWebSocket;
     actor: string;
     token: string;
@@ -33,7 +31,6 @@ export class InnerPresenceClient {
     this.token = props.token;
     this.cache = {};
     this.bus = props.bus;
-    this.key = props.key;
 
     const sendPres = (_: string, args: any) => {
       this.ws.send('presence:cmd', args);
@@ -45,16 +42,16 @@ export class InnerPresenceClient {
    * Gets all values for an identifier, organized by user id.
    * @param key the identifier. Ex: "position"
    */
-  async getAll<T extends any>(): Promise<{ [key: string]: T }> {
+  async getAll<T extends any>(key: string): Promise<{ [key: string]: T }> {
     const val = await fetchPresence<T>(
       PRESENCE_URL,
       this.token,
       this.roomID,
-      this.key
+      key
     );
-    this.cache[this.key] = val;
+    this.cache[key] = val;
 
-    return this.withoutExpiredAndSelf(this.key);
+    return this.withoutExpiredAndSelf(key);
   }
 
   private withoutExpiredAndSelf(key: string) {
@@ -110,34 +107,38 @@ export class InnerPresenceClient {
   }
 
   /**
-   *
+   * @param key
    * @param value Any arbitrary object, string, boolean, or number.
    * @param exp (Optional) Expiration time in seconds
    */
-  set<T extends any>(value: T, exp?: number): { [key: string]: T } {
+  set<T extends any>(
+    key: string,
+    value: T,
+    exp?: number
+  ): { [key: string]: T } {
     let addition = exp ? exp : 60;
     // Convert to unix + add seconds
     const expAt = Math.round(new Date().getTime() / 1000) + addition;
 
-    this.bus.publish({ key: this.key, value, expAt });
+    this.bus.publish({ key: key, value, expAt });
 
-    this.sendPres(this.key, {
+    this.sendPres(key, {
       room: this.roomID,
-      key: this.key,
+      key: key,
       value: JSON.stringify(value),
       expAt: expAt,
     });
 
-    if (!this.cache[this.key]) {
-      this.cache[this.key] = {};
+    if (!this.cache[key]) {
+      this.cache[key] = {};
     }
 
-    this.cache[this.key][this.actor] = {
+    this.cache[key][this.actor] = {
       value,
       expAt: new Date(expAt * 1000),
     };
 
-    return this.withoutExpiredAndSelf(this.key);
+    return this.withoutExpiredAndSelf(key);
   }
 
   dangerouslyUpdateClientDirectly(

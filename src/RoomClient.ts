@@ -118,7 +118,7 @@ export class RoomClient {
 
     this.ws.bind('room:rm_guest', (body) => {
       if (body.room !== this.roomID) return;
-      const client = this.presence('_____any') as InnerPresenceClient;
+      const client = this.presence() as InnerPresenceClient;
 
       const newClient = client.dangerouslyUpdateClientDirectly(
         'room:rm_guest',
@@ -162,7 +162,7 @@ export class RoomClient {
     if (body.room !== this.roomID) return;
     if (body.from === this.actor) return;
 
-    const client = this.presence(body.key) as InnerPresenceClient;
+    const client = this.presence() as InnerPresenceClient;
     const key = body.key;
 
     const now = new Date().getTime() / 1000;
@@ -327,7 +327,7 @@ export class RoomClient {
     return this.createMapLocally(name);
   }
 
-  presence(key: string): PresenceClient {
+  presence(): PresenceClient {
     if (this.InnerPresenceClient) {
       return this.InnerPresenceClient;
     }
@@ -348,7 +348,6 @@ export class RoomClient {
       actor: this.actor,
       token: this.token,
       bus,
-      key: key,
     });
     try {
       this.InnerPresenceClient = p;

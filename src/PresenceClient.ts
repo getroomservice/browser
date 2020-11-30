@@ -9,6 +9,11 @@ import {
 import { throttleByFirstArgument } from './throttle';
 import { LocalBus } from 'localbus';
 
+export type LocalPresenceUpdate = {
+  key: string;
+  valuesByActor: { [key: string]: any };
+};
+
 export class InnerPresenceClient {
   private roomID: string;
   private ws: SuperlumeSend;
@@ -16,14 +21,14 @@ export class InnerPresenceClient {
   private token: string;
   private cache: { [key: string]: PresenceCheckpoint<any> };
   private sendPres: (key: string, args: any) => any;
-  private bus: LocalBus<{ key: string; value: any; expAt: number }>;
+  private bus: LocalBus<LocalPresenceUpdate>;
 
   constructor(props: {
     roomID: string;
     ws: SuperlumeSend;
     actor: string;
     token: string;
-    bus: LocalBus<{ key: string; value: any; expAt: number }>;
+    bus: LocalBus<LocalPresenceUpdate>;
   }) {
     this.roomID = props.roomID;
     this.ws = props.ws;
@@ -54,7 +59,7 @@ export class InnerPresenceClient {
     return this.withoutExpired(key);
   }
 
-  private withoutExpired(key: string) {
+  private withoutExpired(key: string): { [key: string]: any } {
     const result = {} as { [key: string]: any };
     for (let actor in this.cache[key]) {
       const obj = this.cache[key][actor];
@@ -116,8 +121,6 @@ export class InnerPresenceClient {
     // Convert to unix + add seconds
     const expAt = Math.round(new Date().getTime() / 1000) + addition;
 
-    this.bus.publish({ key: key, value, expAt });
-
     this.sendPres(key, {
       room: this.roomID,
       key: key,
@@ -134,7 +137,10 @@ export class InnerPresenceClient {
       expAt: new Date(expAt * 1000),
     };
 
-    return this.withoutExpired(key);
+    const result = this.withoutExpired(key);
+    this.bus.publish({ key, valuesByActor: result });
+
+    return result;
   }
 
   dangerouslyUpdateClientDirectly(

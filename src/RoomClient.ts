@@ -7,7 +7,7 @@ import { DocumentCheckpoint, AuthStrategy, Prop } from './types';
 import { fetchSession, fetchDocument, LocalSession } from './remote';
 import { InnerListClient, ListObject } from './ListClient';
 import { InnerMapClient, MapObject } from './MapClient';
-import { InnerPresenceClient } from './PresenceClient';
+import { InnerPresenceClient, LocalPresenceUpdate } from './PresenceClient';
 import invariant from 'tiny-invariant';
 import { vsReader } from '@roomservice/core';
 import {
@@ -346,15 +346,11 @@ export class RoomClient implements WebsocketDispatch {
     if (this.InnerPresenceClient) {
       return this.InnerPresenceClient;
     }
-    const bus = new LocalBus<{ key: string; value: any; expAt: number }>();
+    const bus = new LocalBus<LocalPresenceUpdate>();
     bus.subscribe((body) => {
-      this.dispatchPresenceCmd({
-        key: body.key,
-        value: body.value,
-        expAt: body.expAt,
-        from: this.actor,
-        room: this.roomID,
-      });
+      for (const cb of this.presenceCallbacksByKey[body.key] || []) {
+        cb(body.valuesByActor, this.actor);
+      }
     });
 
     const p = new InnerPresenceClient({

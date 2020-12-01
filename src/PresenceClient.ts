@@ -54,7 +54,11 @@ export class InnerPresenceClient {
       this.roomID,
       key
     );
-    this.cache[key] = val;
+    //  only initialize non-present values so we don't lose actors not present in this checkpoint
+    this.cache[key] = {
+      ...val,
+      ...(this.cache[key] || {}),
+    };
 
     return this.withoutExpired(key);
   }

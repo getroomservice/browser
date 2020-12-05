@@ -1,5 +1,5 @@
 import { SuperlumeSend } from './ws';
-import { PresenceCheckpoint, Prop } from './types';
+import { DocumentCheckpoint, PresenceCheckpoint, Prop } from './types';
 import { fetchPresence } from './remote';
 import { PRESENCE_URL } from './constants';
 import {
@@ -46,6 +46,13 @@ export class InnerPresenceClient<T extends any> {
       this.ws.send('presence:cmd', args);
     };
     this.sendPres = throttleByFirstArgument(sendPres, 40);
+  }
+
+  bootstrap(checkpoint: DocumentCheckpoint) {
+    this.cache = {
+      ...this.cache,
+      ...(checkpoint.presence[this.key] || {}),
+    };
   }
 
   /**

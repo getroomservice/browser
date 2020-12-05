@@ -1,4 +1,4 @@
-import ReverseTree from './ReverseTree';
+import { ReverseTree } from '@roomservice/core/dist/ReverseTree';
 
 export interface Ref {
   type: 'map' | 'list';
@@ -28,6 +28,7 @@ export interface DocumentCheckpoint {
   actors: { [key: number]: string };
   lists: { [key: string]: ListCheckpoint };
   maps: { [key: string]: MapCheckpoint };
+  presence: { [key: string]: PresenceCheckpoint<any> };
 }
 
 interface PresenceObject<T> {

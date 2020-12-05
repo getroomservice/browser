@@ -41,8 +41,8 @@ export type ListClient<T extends ListObject> = Omit<
   InnerListClient<T>,
   'dangerouslyUpdateClientDirectly' | 'id'
 >;
-export type PresenceClient = Omit<
-  InnerPresenceClient,
+export type PresenceClient<T extends any> = Omit<
+  InnerPresenceClient<T>,
   'dangerouslyUpdateClientDirectly'
 >;
 
@@ -58,7 +58,7 @@ export class RoomClient implements WebsocketDispatch {
   private actor: string;
   private checkpoint: DocumentCheckpoint;
 
-  private InnerPresenceClient?: InnerPresenceClient;
+  private presenceClients: { [key: string]: InnerPresenceClient<any> } = {};
   private listClients: { [key: string]: InnerListClient<any> } = {};
   private mapClients: { [key: string]: InnerMapClient<any> } = {};
   private expires: { [key: string]: NodeJS.Timeout } = {};
@@ -172,14 +172,12 @@ export class RoomClient implements WebsocketDispatch {
 
   dispatchRmGuest(body: Prop<WebSocketLeaveMessage, 'body'>) {
     if (body.room !== this.roomID) return;
-    const client = this.presence() as InnerPresenceClient;
-
-    const newClient = client.dangerouslyUpdateClientDirectly(
-      'room:rm_guest',
-      body
-    );
-    for (let [_, cbs] of Object.entries(this.presenceCallbacksByKey)) {
-      for (const cb of cbs) {
+    for (const [key, presenceClient] of Object.entries(this.presenceClients)) {
+      const newClient = presenceClient.dangerouslyUpdateClientDirectly(
+        'room:rm_guest',
+        body
+      );
+      for (const cb of this.presenceCallbacksByKey[key] || []) {
         cb(newClient, body.guest);
       }
     }
@@ -215,8 +213,8 @@ export class RoomClient implements WebsocketDispatch {
     if (body.room !== this.roomID) return;
     if (body.from === this.actor) return;
 
-    const client = this.presence() as InnerPresenceClient;
     const key = body.key;
+    const client = this.presence(key) as InnerPresenceClient<any>;
 
     const now = new Date().getTime() / 1000;
     const secondsTillTimeout = body.expAt - now;
@@ -342,32 +340,35 @@ export class RoomClient implements WebsocketDispatch {
     return this.createMapLocally(name);
   }
 
-  presence(): PresenceClient {
-    if (this.InnerPresenceClient) {
-      return this.InnerPresenceClient;
+  presence<T extends any>(key: string): PresenceClient<T> {
+    if (this.presenceClients[key]) {
+      return this.presenceClients[key];
     }
+
     const bus = new LocalBus<LocalPresenceUpdate>();
     bus.subscribe((body) => {
       for (const cb of this.presenceCallbacksByKey[body.key] || []) {
-        cb(body.valuesByActor, this.actor);
+        cb(body.valuesByUser, this.actor);
       }
     });
 
-    const p = new InnerPresenceClient({
+    const p = new InnerPresenceClient<T>({
       roomID: this.roomID,
       ws: this.ws,
       actor: this.actor,
       token: this.token,
+      key,
       bus,
     });
+
     try {
-      this.InnerPresenceClient = p;
+      this.presenceClients[key] = p;
     } catch (err) {
       throw new Error(
         `Don't Freeze State. See more: https://err.sh/getroomservice/browser/dont-freeze`
       );
     }
-    return this.InnerPresenceClient;
+    return this.presenceClients[key];
   }
 
   private mapCallbacksByObjID: { [key: string]: Array<Function> } = {};
@@ -391,7 +392,7 @@ export class RoomClient implements WebsocketDispatch {
     onChangeFn: (map: T, from: string) => any
   ): ListenerBundle;
   subscribe<T extends any>(
-    presence: PresenceClient,
+    presence: PresenceClient<T>,
     key: string,
     onChangeFn: (obj: { [key: string]: T }, from: string) => any
   ): ListenerBundle;

@@ -21,7 +21,7 @@ export class InnerPresenceClient<T extends any> {
   private cache: PresenceCheckpoint<T>;
   private sendPres: (key: string, args: any) => any;
   private bus: LocalBus<LocalPresenceUpdate>;
-  private key: string;
+  key: string;
 
   constructor(props: {
     roomID: string;

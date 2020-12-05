@@ -393,25 +393,23 @@ export class RoomClient implements WebsocketDispatch {
   ): ListenerBundle;
   subscribe<T extends any>(
     presence: PresenceClient<T>,
-    key: string,
     onChangeFn: (obj: { [key: string]: T }, from: string) => any
   ): ListenerBundle;
-  subscribe<T extends any>(
-    obj: any,
-    onChangeFnOrString: Function | string,
-    onChangeFn?: (obj: { [key: string]: T }, from: string) => any
-  ): ListenerBundle {
+  subscribe<T extends any>(obj: any, onChangeFn: Function): ListenerBundle {
     // Presence handler
-    if (typeof onChangeFnOrString === 'string') {
-      return this.subscribePresence<T>(obj, onChangeFnOrString, onChangeFn);
+    if (obj instanceof InnerPresenceClient) {
+      return this.subscribePresence<T>(
+        obj,
+        onChangeFn as (obj: { [key: string]: T }, from: string) => any
+      );
     }
 
     // create new closure so fns can be subscribed/unsubscribed multiple times
     const cb = (
-      obj: InnerMapClient<any> | InnerListClient<any>,
+      obj: ListObject | MapObject | { [key: string]: T },
       from: string
     ) => {
-      onChangeFnOrString(obj, from);
+      onChangeFn(obj, from);
     };
 
     let objID;
@@ -438,8 +436,7 @@ export class RoomClient implements WebsocketDispatch {
   }
 
   private subscribePresence<T extends any>(
-    obj: any,
-    key: string,
+    obj: InnerPresenceClient<T>,
     onChangeFn: ((obj: { [key: string]: T }, from: string) => any) | undefined
   ): ListenerBundle {
     invariant(
@@ -453,6 +450,8 @@ export class RoomClient implements WebsocketDispatch {
         onChangeFn(obj, from);
       }
     };
+
+    const key = obj.key;
 
     this.presenceCallbacksByKey[key] = this.presenceCallbacksByKey[key] || [];
     this.presenceCallbacksByKey[key].push(cb);

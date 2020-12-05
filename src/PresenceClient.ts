@@ -1,7 +1,5 @@
 import { SuperlumeSend } from './ws';
 import { DocumentCheckpoint, PresenceCheckpoint, Prop } from './types';
-import { fetchPresence } from './remote';
-import { PRESENCE_URL } from './constants';
 import {
   WebSocketPresenceFwdMessage,
   WebSocketLeaveMessage,
@@ -20,7 +18,6 @@ export class InnerPresenceClient<T extends any> {
   private roomID: string;
   private ws: SuperlumeSend;
   private actor: string;
-  private token: string;
   private cache: PresenceCheckpoint<T>;
   private sendPres: (key: string, args: any) => any;
   private bus: LocalBus<LocalPresenceUpdate>;
@@ -30,14 +27,12 @@ export class InnerPresenceClient<T extends any> {
     roomID: string;
     ws: SuperlumeSend;
     actor: string;
-    token: string;
     key: string;
     bus: LocalBus<LocalPresenceUpdate>;
   }) {
     this.roomID = props.roomID;
     this.ws = props.ws;
     this.actor = props.actor;
-    this.token = props.token;
     this.key = props.key;
     this.cache = {};
     this.bus = props.bus;

@@ -52,7 +52,6 @@ interface DispatchDocCmdMsg {
 }
 
 export class RoomClient implements WebsocketDispatch {
-  private token: string;
   private roomID: string;
   private docID: string;
   private actor: string;
@@ -85,7 +84,6 @@ export class RoomClient implements WebsocketDispatch {
       room: roomID,
       session: params.session,
     });
-    this.token = params.token;
     this.roomID = params.roomID;
     this.docID = params.checkpoint.id;
     this.actor = params.actor;
@@ -359,7 +357,6 @@ export class RoomClient implements WebsocketDispatch {
       roomID: this.roomID,
       ws: this.ws,
       actor: this.actor,
-      token: this.token,
       key,
       bus,
     });

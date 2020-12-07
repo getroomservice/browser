@@ -354,6 +354,7 @@ export class RoomClient implements WebsocketDispatch {
     });
 
     const p = new InnerPresenceClient<T>({
+      checkpoint: this.checkpoint,
       roomID: this.roomID,
       ws: this.ws,
       actor: this.actor,

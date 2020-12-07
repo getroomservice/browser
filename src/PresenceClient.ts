@@ -25,6 +25,7 @@ export class InnerPresenceClient<T extends any> {
 
   constructor(props: {
     roomID: string;
+    checkpoint: DocumentCheckpoint;
     ws: SuperlumeSend;
     actor: string;
     key: string;
@@ -41,6 +42,8 @@ export class InnerPresenceClient<T extends any> {
       this.ws.send('presence:cmd', args);
     };
     this.sendPres = throttleByFirstArgument(sendPres, 40);
+
+    this.bootstrap(props.checkpoint);
   }
 
   bootstrap(checkpoint: DocumentCheckpoint) {

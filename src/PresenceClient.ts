@@ -54,8 +54,8 @@ export class InnerPresenceClient<T extends any> {
   }
 
   /**
-   * Gets all values for an identifier, organized by user id.
-   * @param key the identifier. Ex: "position"
+   * Gets all values for the presence key this client was created with,
+   * organized by user id.
    */
   getAll(): ValuesByUser<T> {
     //  only initialize non-present values so we don't lose actors not present in this checkpoint
@@ -63,8 +63,11 @@ export class InnerPresenceClient<T extends any> {
     return this.withoutExpired();
   }
 
-  my<T extends any>(): T | undefined {
-    return (this.cache || {})[this.actor] as T | undefined;
+  /**
+   * Gets the current user's value.
+   */
+  getMine(): T | undefined {
+    return (this.cache || {})[this.actor]?.value;
   }
 
   private withoutExpired(): ValuesByUser<T> {

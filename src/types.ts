@@ -28,7 +28,6 @@ export interface DocumentCheckpoint {
   actors: { [key: number]: string };
   lists: { [key: string]: ListCheckpoint };
   maps: { [key: string]: MapCheckpoint };
-  presence: { [key: string]: PresenceCheckpoint<any> };
 }
 
 interface PresenceObject<T> {

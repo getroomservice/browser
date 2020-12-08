@@ -5,29 +5,56 @@ import {
   AuthStrategy,
 } from './types';
 
-export async function fetchPresence<T extends any>(
+type AllPresence = { [key: string]: PresenceCheckpoint<any> };
+export interface BootstrapState {
+  presence: AllPresence;
+  document: DocumentCheckpoint;
+}
+
+export async function fetchBootstrapState(props: {
+  url: string;
+  token: string;
+  roomID: string;
+  docID: string;
+}): Promise<BootstrapState> {
+  const [allPresence, documentCheckpoint] = await Promise.all<
+    AllPresence,
+    DocumentCheckpoint
+  >([
+    fetchPresence(props.url, props.token, props.roomID),
+    fetchDocument(props.url, props.token, props.docID),
+  ]);
+
+  return {
+    presence: allPresence,
+    document: documentCheckpoint,
+  };
+}
+
+export async function fetchPresence(
   url: string,
   token: string,
-  roomID: string,
-  key: string
-): Promise<PresenceCheckpoint<T>> {
-  const res = await fetch(url + '/' + roomID + '/' + encodeURIComponent(key), {
+  roomID: string
+): Promise<AllPresence> {
+  const res = await fetch(url + '/' + roomID, {
     headers: {
       Authorization: 'Bearer: ' + token,
     },
   });
 
-  const doc = (await res.json()) as PresenceCheckpoint<T>;
+  const doc = (await res.json()) as { [key: string]: PresenceCheckpoint<any> };
 
   // Parse JSON values
-  for (let k in doc) {
-    if (typeof doc[k].value === 'string') {
-      let json;
-      try {
-        json = JSON.parse(doc[k].value as string);
-      } catch (err) {}
-      if (json) {
-        doc[k].value = json;
+  for (let key in Object.keys(doc)) {
+    for (let actor in Object.keys(doc[key])) {
+      if (typeof doc[key][actor].value === 'string') {
+        let json;
+        try {
+          json = JSON.parse(doc[key][actor].value as string);
+        } catch (err) {}
+        if (json) {
+          doc[key][actor].value = json;
+        }
       }
     }
   }
@@ -39,15 +66,15 @@ export async function fetchDocument(
   url: string,
   token: string,
   docID: string
-): Promise<Message<DocumentCheckpoint>> {
+): Promise<DocumentCheckpoint> {
   const res = await fetch(url + '/' + docID, {
     headers: {
       Authorization: 'Bearer: ' + token,
     },
   });
 
-  const doc = await res.json();
-  return doc as Message<DocumentCheckpoint>;
+  const doc: Message<DocumentCheckpoint> = await res.json();
+  return doc.body;
 }
 
 export interface ServerSession {

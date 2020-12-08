@@ -1,7 +1,7 @@
 import { mockSession } from './RoomClient.test';
 import { Prop } from 'types';
 import {
-  DocumentFetch,
+  BootstrapFetch,
   ReconnectingWebSocket,
   WebsocketDispatch,
   WebSocketFactory,
@@ -33,7 +33,7 @@ function mockDispatch(): WebsocketDispatch {
 function mockReconnectingWS(
   send: Prop<WebSocket, 'send'>,
   onmessage: Prop<WebSocket, 'onmessage'>,
-  fetch: DocumentFetch
+  fetch: BootstrapFetch
 ): ReconnectingWebSocket {
   return new ReconnectingWebSocket({
     dispatcher: mockDispatch(),
@@ -42,7 +42,7 @@ function mockReconnectingWS(
     room: 'mock-room',
     session: mockSession(),
     wsFactory: makeTestWSFactory(send, onmessage),
-    documentFetch: fetch,
+    bootstrapFetch: fetch,
   });
 }
 

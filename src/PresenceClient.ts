@@ -1,11 +1,12 @@
 import { SuperlumeSend } from './ws';
-import { DocumentCheckpoint, PresenceCheckpoint, Prop } from './types';
+import { PresenceCheckpoint, Prop } from './types';
 import {
   WebSocketPresenceFwdMessage,
   WebSocketLeaveMessage,
 } from './wsMessages';
 import { throttleByFirstArgument } from './throttle';
 import { LocalBus } from 'localbus';
+import { BootstrapState } from 'remote';
 
 export type LocalPresenceUpdate = {
   key: string;
@@ -25,7 +26,7 @@ export class InnerPresenceClient<T extends any> {
 
   constructor(props: {
     roomID: string;
-    checkpoint: DocumentCheckpoint;
+    checkpoint: BootstrapState;
     ws: SuperlumeSend;
     actor: string;
     key: string;
@@ -46,7 +47,7 @@ export class InnerPresenceClient<T extends any> {
     this.bootstrap(props.checkpoint);
   }
 
-  bootstrap(checkpoint: DocumentCheckpoint) {
+  bootstrap(checkpoint: BootstrapState) {
     this.cache = {
       ...this.cache,
       ...(checkpoint.presence[this.key] || {}),

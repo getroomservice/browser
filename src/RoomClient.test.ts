@@ -40,6 +40,7 @@ function mockRoomClient(): RoomClient {
     session,
     wsURL: 'wss://websocket.invalid',
     docsURL: 'https://docs.invalid',
+    presenceURL: 'https://presence.invalid',
     actor: 'me',
     bootstrapState,
     token: session.token,

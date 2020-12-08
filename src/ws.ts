@@ -22,6 +22,7 @@ const FORWARDED_TYPES = ['doc:fwd', 'presence:fwd', 'room:rm_guest'];
 export class ReconnectingWebSocket implements SuperlumeSend {
   private wsURL: string;
   private docsURL: string;
+  private presenceURL: string;
   private room: string;
 
   private session: LocalSession;
@@ -40,6 +41,7 @@ export class ReconnectingWebSocket implements SuperlumeSend {
     dispatcher: WebsocketDispatch;
     wsURL: string;
     docsURL: string;
+    presenceURL: string;
     room: string;
     session: LocalSession;
     wsFactory?: WebSocketFactory;
@@ -48,6 +50,7 @@ export class ReconnectingWebSocket implements SuperlumeSend {
     this.dispatcher = params.dispatcher;
     this.wsURL = params.wsURL;
     this.docsURL = params.docsURL;
+    this.presenceURL = params.presenceURL;
     this.room = params.room;
     this.session = params.session;
     this.wsFactory = params.wsFactory || openWS;
@@ -89,7 +92,8 @@ export class ReconnectingWebSocket implements SuperlumeSend {
       const bootstrapState = await this.bootstrapFetch({
         docID: this.session.docID,
         roomID: this.session.roomID,
-        url: this.docsURL,
+        docsURL: this.docsURL,
+        presenceURL: this.presenceURL,
         token: this.session.token,
       });
 
@@ -347,7 +351,8 @@ export type WebSocketTransport = Pick<
 >;
 
 export type BootstrapFetch = (props: {
-  url: string;
+  docsURL: string;
+  presenceURL: string;
   token: string;
   roomID: string;
   docID: string;

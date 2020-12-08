@@ -12,7 +12,8 @@ export interface BootstrapState {
 }
 
 export async function fetchBootstrapState(props: {
-  url: string;
+  docsURL: string;
+  presenceURL: string;
   token: string;
   roomID: string;
   docID: string;
@@ -21,8 +22,8 @@ export async function fetchBootstrapState(props: {
     AllPresence,
     DocumentCheckpoint
   >([
-    fetchPresence(props.url, props.token, props.roomID),
-    fetchDocument(props.url, props.token, props.docID),
+    fetchPresence(props.presenceURL, props.token, props.roomID),
+    fetchDocument(props.docsURL, props.token, props.docID),
   ]);
 
   return {

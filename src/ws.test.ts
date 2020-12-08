@@ -39,6 +39,7 @@ function mockReconnectingWS(
     dispatcher: mockDispatch(),
     wsURL: 'wss://ws.invalid',
     docsURL: 'https://docs.invalid',
+    presenceURL: 'https://presence.invalid',
     room: 'mock-room',
     session: mockSession(),
     wsFactory: makeTestWSFactory(send, onmessage),

@@ -22,7 +22,7 @@ import {
   WebSocketServerMessage,
 } from './wsMessages';
 import { LocalBus } from './localbus';
-import { WS_URL } from './constants';
+import { PRESENCE_URL, WS_URL } from './constants';
 import { DOCS_URL } from './constants';
 
 type Listener = {
@@ -40,15 +40,15 @@ type InternalFunctions = 'dangerouslyUpdateClientDirectly';
 type Omit<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>>;
 export type MapClient<T extends MapObject> = Omit<
   InnerMapClient<T>,
-  InternalFunctions | 'id'
+  InternalFunctions | 'id' | 'bootstrap'
 >;
 export type ListClient<T extends ListObject> = Omit<
   InnerListClient<T>,
-  'dangerouslyUpdateClientDirectly' | 'id'
+  'dangerouslyUpdateClientDirectly' | 'id' | 'bootstrap'
 >;
 export type PresenceClient<T extends any> = Omit<
   InnerPresenceClient<T>,
-  'dangerouslyUpdateClientDirectly'
+  'dangerouslyUpdateClientDirectly' | 'bootstrap'
 >;
 
 interface DispatchDocCmdMsg {
@@ -75,17 +75,19 @@ export class RoomClient implements WebsocketDispatch {
     session: LocalSession;
     wsURL: string;
     docsURL: string;
+    presenceURL: string;
     actor: string;
     bootstrapState: BootstrapState;
     token: string;
     roomID: string;
     docID: string;
   }) {
-    const { wsURL, docsURL, roomID } = params;
+    const { wsURL, docsURL, presenceURL, roomID } = params;
     this.ws = new ReconnectingWebSocket({
       dispatcher: this,
       wsURL,
       docsURL,
+      presenceURL,
       room: roomID,
       session: params.session,
     });
@@ -492,6 +494,7 @@ export class RoomClient implements WebsocketDispatch {
 
 export async function createRoom<A extends object>(params: {
   docsURL: string;
+  presenceURL: string;
   authStrategy: AuthStrategy<A>;
   authCtx: A;
   room: string;
@@ -505,7 +508,8 @@ export async function createRoom<A extends object>(params: {
   );
 
   const bootstrapState = await fetchBootstrapState({
-    url: params.docsURL,
+    docsURL: params.docsURL,
+    presenceURL: params.presenceURL,
     token: session.token,
     docID: session.docID,
     roomID: session.roomID,
@@ -520,6 +524,7 @@ export async function createRoom<A extends object>(params: {
     authCtx: params.authCtx,
     wsURL: WS_URL,
     docsURL: DOCS_URL,
+    presenceURL: PRESENCE_URL,
     session,
   });
 

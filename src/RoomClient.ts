@@ -185,6 +185,7 @@ export class RoomClient implements WebsocketDispatch {
         'room:rm_guest',
         body
       );
+      if (!newClient) return;
       for (const cb of this.presenceCallbacksByKey[key] || []) {
         cb(newClient, body.guest);
       }

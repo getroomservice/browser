@@ -59,8 +59,6 @@ export class InnerPresenceClient<T extends any> {
    * organized by user id.
    */
   getAll(): ValuesByUser<T> {
-    //  only initialize non-present values so we don't lose actors not present in this checkpoint
-
     return this.withoutExpired();
   }
 
@@ -72,7 +70,7 @@ export class InnerPresenceClient<T extends any> {
   }
 
   private withoutExpired(): ValuesByUser<T> {
-    const result = {} as { [key: string]: any };
+    const result = {} as ValuesByUser<T>;
     for (let actor in this.cache) {
       const obj = this.cache[actor];
 
@@ -87,26 +85,24 @@ export class InnerPresenceClient<T extends any> {
   }
 
   private withoutActorOrExpired(actor: string): ValuesByUser<T> {
-    const result = {} as { [key: string]: any };
-    for (let key in this.cache) {
-      for (let a in this.cache[key]) {
-        const obj = this.cache[a];
-        if (!obj) continue;
+    const result = {} as ValuesByUser<T>;
+    for (let a in this.cache) {
+      const obj = this.cache[a];
+      if (!obj) continue;
 
-        // remove this actor
-        if (a === actor && this.cache[a]) {
-          delete this.cache[a];
-          continue;
-        }
-
-        // Remove expired
-        if (new Date() > obj.expAt) {
-          delete this.cache[a];
-          continue;
-        }
-
-        result[a] = obj.value;
+      // remove this actor
+      if (a === actor && this.cache[a]) {
+        delete this.cache[a];
+        continue;
       }
+
+      // Remove expired
+      if (new Date() > obj.expAt) {
+        delete this.cache[a];
+        continue;
+      }
+
+      result[a] = obj.value;
     }
     return result;
   }

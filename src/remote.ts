@@ -46,8 +46,8 @@ export async function fetchPresence(
   const doc = (await res.json()) as { [key: string]: PresenceCheckpoint<any> };
 
   // Parse JSON values
-  for (let key in Object.keys(doc)) {
-    for (let actor in Object.keys(doc[key])) {
+  for (let key of Object.keys(doc)) {
+    for (let actor of Object.keys(doc[key])) {
       if (typeof doc[key][actor].value === 'string') {
         let json;
         try {

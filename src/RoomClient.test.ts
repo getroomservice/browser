@@ -1,6 +1,6 @@
 import { RoomClient } from './RoomClient';
 import { DocumentCheckpoint } from './types';
-import { LocalSession } from 'remote';
+import { BootstrapState, LocalSession } from 'remote';
 
 export function mockSession(): LocalSession {
   return {
@@ -23,9 +23,16 @@ export function mockCheckpoint(): DocumentCheckpoint {
   };
 }
 
+export function mockBootstrapState(): BootstrapState {
+  return {
+    document: mockCheckpoint(),
+    presence: {},
+  };
+}
+
 function mockRoomClient(): RoomClient {
   const session = mockSession();
-  const checkpoint = mockCheckpoint();
+  const bootstrapState = mockBootstrapState();
 
   return new RoomClient({
     auth: 'xyz',
@@ -33,8 +40,9 @@ function mockRoomClient(): RoomClient {
     session,
     wsURL: 'wss://websocket.invalid',
     docsURL: 'https://docs.invalid',
+    presenceURL: 'https://presence.invalid',
     actor: 'me',
-    checkpoint,
+    bootstrapState,
     token: session.token,
     roomID: session.roomID,
     docID: session.docID,

@@ -3,8 +3,13 @@ import {
   ReconnectingWebSocket,
   WebsocketDispatch,
 } from './ws';
-import { DocumentCheckpoint, AuthStrategy, Prop } from './types';
-import { fetchSession, fetchDocument, LocalSession } from './remote';
+import { AuthStrategy, Prop } from './types';
+import {
+  fetchSession,
+  LocalSession,
+  BootstrapState,
+  fetchBootstrapState,
+} from './remote';
 import { InnerListClient, ListObject } from './ListClient';
 import { InnerMapClient, MapObject } from './MapClient';
 import { InnerPresenceClient, LocalPresenceUpdate } from './PresenceClient';
@@ -17,7 +22,7 @@ import {
   WebSocketServerMessage,
 } from './wsMessages';
 import { LocalBus } from './localbus';
-import { WS_URL } from './constants';
+import { PRESENCE_URL, WS_URL } from './constants';
 import { DOCS_URL } from './constants';
 
 type Listener = {
@@ -35,15 +40,15 @@ type InternalFunctions = 'dangerouslyUpdateClientDirectly';
 type Omit<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>>;
 export type MapClient<T extends MapObject> = Omit<
   InnerMapClient<T>,
-  InternalFunctions | 'id'
+  InternalFunctions | 'id' | 'bootstrap'
 >;
 export type ListClient<T extends ListObject> = Omit<
   InnerListClient<T>,
-  'dangerouslyUpdateClientDirectly' | 'id'
+  'dangerouslyUpdateClientDirectly' | 'id' | 'bootstrap'
 >;
-export type PresenceClient = Omit<
-  InnerPresenceClient,
-  'dangerouslyUpdateClientDirectly'
+export type PresenceClient<T extends any> = Omit<
+  InnerPresenceClient<T>,
+  'dangerouslyUpdateClientDirectly' | 'bootstrap'
 >;
 
 interface DispatchDocCmdMsg {
@@ -52,13 +57,12 @@ interface DispatchDocCmdMsg {
 }
 
 export class RoomClient implements WebsocketDispatch {
-  private token: string;
   private roomID: string;
   private docID: string;
   private actor: string;
-  private checkpoint: DocumentCheckpoint;
+  private bootstrapState: BootstrapState;
 
-  private InnerPresenceClient?: InnerPresenceClient;
+  private presenceClients: { [key: string]: InnerPresenceClient<any> } = {};
   private listClients: { [key: string]: InnerListClient<any> } = {};
   private mapClients: { [key: string]: InnerMapClient<any> } = {};
   private expires: { [key: string]: NodeJS.Timeout } = {};
@@ -71,25 +75,26 @@ export class RoomClient implements WebsocketDispatch {
     session: LocalSession;
     wsURL: string;
     docsURL: string;
+    presenceURL: string;
     actor: string;
-    checkpoint: DocumentCheckpoint;
+    bootstrapState: BootstrapState;
     token: string;
     roomID: string;
     docID: string;
   }) {
-    const { wsURL, docsURL, roomID } = params;
+    const { wsURL, docsURL, presenceURL, roomID } = params;
     this.ws = new ReconnectingWebSocket({
       dispatcher: this,
       wsURL,
       docsURL,
+      presenceURL,
       room: roomID,
       session: params.session,
     });
-    this.token = params.token;
     this.roomID = params.roomID;
-    this.docID = params.checkpoint.id;
+    this.docID = params.bootstrapState.document.id;
     this.actor = params.actor;
-    this.checkpoint = params.checkpoint;
+    this.bootstrapState = params.bootstrapState;
   }
 
   //  impl WebsocketDispatch
@@ -113,13 +118,16 @@ export class RoomClient implements WebsocketDispatch {
     }
   }
 
-  bootstrap(checkpoint: DocumentCheckpoint): void {
-    this.checkpoint = checkpoint;
+  bootstrap(state: BootstrapState): void {
+    this.bootstrapState = state;
     for (const [_, client] of Object.entries(this.listClients)) {
-      client.bootstrap(checkpoint);
+      client.bootstrap(state);
     }
     for (const [_, client] of Object.entries(this.mapClients)) {
-      client.bootstrap(checkpoint);
+      client.bootstrap(state);
+    }
+    for (const [_, client] of Object.entries(this.presenceClients)) {
+      client.bootstrap(state);
     }
     this.queueIncomingCmds = false;
     for (const [msgType, body] of this.cmdQueue) {
@@ -144,7 +152,7 @@ export class RoomClient implements WebsocketDispatch {
       return;
     }
     // Ignore version stamps older than checkpoint
-    if (vsReader(atob).isOlderVS(body.vs, this.checkpoint.vs)) {
+    if (vsReader(atob).isOlderVS(body.vs, this.bootstrapState.document.vs)) {
       return;
     }
 
@@ -172,14 +180,13 @@ export class RoomClient implements WebsocketDispatch {
 
   dispatchRmGuest(body: Prop<WebSocketLeaveMessage, 'body'>) {
     if (body.room !== this.roomID) return;
-    const client = this.presence() as InnerPresenceClient;
-
-    const newClient = client.dangerouslyUpdateClientDirectly(
-      'room:rm_guest',
-      body
-    );
-    for (let [_, cbs] of Object.entries(this.presenceCallbacksByKey)) {
-      for (const cb of cbs) {
+    for (const [key, presenceClient] of Object.entries(this.presenceClients)) {
+      const newClient = presenceClient.dangerouslyUpdateClientDirectly(
+        'room:rm_guest',
+        body
+      );
+      if (!newClient) return;
+      for (const cb of this.presenceCallbacksByKey[key] || []) {
         cb(newClient, body.guest);
       }
     }
@@ -215,8 +222,8 @@ export class RoomClient implements WebsocketDispatch {
     if (body.room !== this.roomID) return;
     if (body.from === this.actor) return;
 
-    const client = this.presence() as InnerPresenceClient;
     const key = body.key;
+    const client = this.presence(key) as InnerPresenceClient<any>;
 
     const now = new Date().getTime() / 1000;
     const secondsTillTimeout = body.expAt - now;
@@ -269,7 +276,7 @@ export class RoomClient implements WebsocketDispatch {
     });
 
     const l = new InnerListClient<T>({
-      checkpoint: this.checkpoint,
+      checkpoint: this.bootstrapState.document,
       roomID: this.roomID,
       docID: this.docID,
       listID: name,
@@ -287,14 +294,14 @@ export class RoomClient implements WebsocketDispatch {
     }
 
     // create a list if it doesn't exist
-    if (!this.checkpoint.lists[name]) {
+    if (!this.bootstrapState.document.lists[name]) {
       this.ws.send('doc:cmd', {
         args: ['lcreate', this.docID, name],
         room: this.roomID,
       });
 
       // Assume success
-      this.checkpoint.lists[name] = {
+      this.bootstrapState.document.lists[name] = {
         afters: [],
         ids: [],
         values: [],
@@ -314,7 +321,7 @@ export class RoomClient implements WebsocketDispatch {
     });
 
     const m = new InnerMapClient<T>({
-      checkpoint: this.checkpoint,
+      checkpoint: this.bootstrapState.document,
       roomID: this.roomID,
       docID: this.docID,
       mapID: name,
@@ -332,7 +339,7 @@ export class RoomClient implements WebsocketDispatch {
     }
 
     // Create this map if it doesn't exist
-    if (!this.checkpoint.maps[name]) {
+    if (!this.bootstrapState.document.maps[name]) {
       this.ws.send('doc:cmd', {
         args: ['mcreate', this.docID, name],
         room: this.roomID,
@@ -342,32 +349,35 @@ export class RoomClient implements WebsocketDispatch {
     return this.createMapLocally(name);
   }
 
-  presence(): PresenceClient {
-    if (this.InnerPresenceClient) {
-      return this.InnerPresenceClient;
+  presence<T extends any>(key: string): PresenceClient<T> {
+    if (this.presenceClients[key]) {
+      return this.presenceClients[key];
     }
+
     const bus = new LocalBus<LocalPresenceUpdate>();
     bus.subscribe((body) => {
       for (const cb of this.presenceCallbacksByKey[body.key] || []) {
-        cb(body.valuesByActor, this.actor);
+        cb(body.valuesByUser, this.actor);
       }
     });
 
-    const p = new InnerPresenceClient({
+    const p = new InnerPresenceClient<T>({
+      checkpoint: this.bootstrapState,
       roomID: this.roomID,
       ws: this.ws,
       actor: this.actor,
-      token: this.token,
+      key,
       bus,
     });
+
     try {
-      this.InnerPresenceClient = p;
+      this.presenceClients[key] = p;
     } catch (err) {
       throw new Error(
         `Don't Freeze State. See more: https://err.sh/getroomservice/browser/dont-freeze`
       );
     }
-    return this.InnerPresenceClient;
+    return this.presenceClients[key];
   }
 
   private mapCallbacksByObjID: { [key: string]: Array<Function> } = {};
@@ -391,26 +401,24 @@ export class RoomClient implements WebsocketDispatch {
     onChangeFn: (map: T, from: string) => any
   ): ListenerBundle;
   subscribe<T extends any>(
-    presence: PresenceClient,
-    key: string,
+    presence: PresenceClient<T>,
     onChangeFn: (obj: { [key: string]: T }, from: string) => any
   ): ListenerBundle;
-  subscribe<T extends any>(
-    obj: any,
-    onChangeFnOrString: Function | string,
-    onChangeFn?: (obj: { [key: string]: T }, from: string) => any
-  ): ListenerBundle {
+  subscribe<T extends any>(obj: any, onChangeFn: Function): ListenerBundle {
     // Presence handler
-    if (typeof onChangeFnOrString === 'string') {
-      return this.subscribePresence<T>(obj, onChangeFnOrString, onChangeFn);
+    if (obj instanceof InnerPresenceClient) {
+      return this.subscribePresence<T>(
+        obj,
+        onChangeFn as (obj: { [key: string]: T }, from: string) => any
+      );
     }
 
     // create new closure so fns can be subscribed/unsubscribed multiple times
     const cb = (
-      obj: InnerMapClient<any> | InnerListClient<any>,
+      obj: ListObject | MapObject | { [key: string]: T },
       from: string
     ) => {
-      onChangeFnOrString(obj, from);
+      onChangeFn(obj, from);
     };
 
     let objID;
@@ -437,8 +445,7 @@ export class RoomClient implements WebsocketDispatch {
   }
 
   private subscribePresence<T extends any>(
-    obj: any,
-    key: string,
+    obj: InnerPresenceClient<T>,
     onChangeFn: ((obj: { [key: string]: T }, from: string) => any) | undefined
   ): ListenerBundle {
     invariant(
@@ -452,6 +459,8 @@ export class RoomClient implements WebsocketDispatch {
         onChangeFn(obj, from);
       }
     };
+
+    const key = obj.key;
 
     this.presenceCallbacksByKey[key] = this.presenceCallbacksByKey[key] || [];
     this.presenceCallbacksByKey[key].push(cb);
@@ -486,6 +495,7 @@ export class RoomClient implements WebsocketDispatch {
 
 export async function createRoom<A extends object>(params: {
   docsURL: string;
+  presenceURL: string;
   authStrategy: AuthStrategy<A>;
   authCtx: A;
   room: string;
@@ -497,14 +507,17 @@ export async function createRoom<A extends object>(params: {
     params.room,
     params.document
   );
-  const { body } = await fetchDocument(
-    params.docsURL,
-    session.token,
-    session.docID
-  );
+
+  const bootstrapState = await fetchBootstrapState({
+    docsURL: params.docsURL,
+    presenceURL: params.presenceURL,
+    token: session.token,
+    docID: session.docID,
+    roomID: session.roomID,
+  });
   const roomClient = new RoomClient({
     actor: session.guestReference,
-    checkpoint: body,
+    bootstrapState,
     token: session.token,
     roomID: session.roomID,
     docID: params.document,
@@ -512,6 +525,7 @@ export async function createRoom<A extends object>(params: {
     authCtx: params.authCtx,
     wsURL: WS_URL,
     docsURL: DOCS_URL,
+    presenceURL: PRESENCE_URL,
     session,
   });
 

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import RoomService from '../../dist';
+import RoomService, { RoomClient } from '../../dist';
 
 const useInterval = (callback, delay) => {
   const savedCallback = useRef() as any;
@@ -24,21 +24,22 @@ const rs = new RoomService({
 });
 
 export default function Presence() {
-  const [room, setRoom] = useState();
+  const [room, setRoom] = useState<RoomClient>();
   const [first, setFirst] = useState<any>({});
   const [second, setSecond] = useState<any>({});
 
   useEffect(() => {
     async function load() {
       const room = await rs.room('presence-demo');
-      const p = room.presence();
-      setRoom(room as any);
+      const first = room.presence('first');
+      const second = room.presence('second');
+      setRoom(room);
 
-      room.subscribe(p, 'first', (val) => {
+      room.subscribe(first, (val) => {
         setFirst(val);
       });
 
-      room.subscribe(p, 'second', (val) => {
+      room.subscribe(second, (val) => {
         setSecond(val);
       });
     }
@@ -47,10 +48,10 @@ export default function Presence() {
 
   useInterval(() => {
     if (room === undefined) return;
-    // @ts-ignore
-    room!.presence().set('first', new Date().toTimeString());
-    // @ts-ignore
-    room!.presence().set('second', new Date().toTimeString());
+    if (room) {
+      room?.presence('first').set(new Date().toTimeString());
+      room?.presence('second').set(new Date().toTimeString());
+    }
   }, 1000);
 
   return (

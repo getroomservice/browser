@@ -8,15 +8,9 @@ import {
   WebSocketLeaveMessage,
   WebSocketJoinMessage,
 } from './wsMessages';
-import {
-  WebSocketLikeConnection,
-  Prop,
-  DocumentCheckpoint,
-  Message,
-} from 'types';
-import { LocalSession } from './remote';
+import { WebSocketLikeConnection, Prop } from 'types';
+import { BootstrapState, fetchBootstrapState, LocalSession } from './remote';
 import { delay } from './util';
-import { fetchDocument } from './remote';
 type Cb = (body: any) => void;
 
 const WEBSOCKET_TIMEOUT = 1000 * 2;
@@ -28,12 +22,13 @@ const FORWARDED_TYPES = ['doc:fwd', 'presence:fwd', 'room:rm_guest'];
 export class ReconnectingWebSocket implements SuperlumeSend {
   private wsURL: string;
   private docsURL: string;
+  private presenceURL: string;
   private room: string;
 
   private session: LocalSession;
 
   private wsFactory: WebSocketFactory;
-  private documentFetch: DocumentFetch;
+  private bootstrapFetch: BootstrapFetch;
 
   // Invariant: at most 1 of current/pendingConn are present
   private currentConn?: WebSocketLikeConnection;
@@ -46,18 +41,20 @@ export class ReconnectingWebSocket implements SuperlumeSend {
     dispatcher: WebsocketDispatch;
     wsURL: string;
     docsURL: string;
+    presenceURL: string;
     room: string;
     session: LocalSession;
     wsFactory?: WebSocketFactory;
-    documentFetch?: DocumentFetch;
+    bootstrapFetch?: BootstrapFetch;
   }) {
     this.dispatcher = params.dispatcher;
     this.wsURL = params.wsURL;
     this.docsURL = params.docsURL;
+    this.presenceURL = params.presenceURL;
     this.room = params.room;
     this.session = params.session;
     this.wsFactory = params.wsFactory || openWS;
-    this.documentFetch = params.documentFetch || fetchDocument;
+    this.bootstrapFetch = params.bootstrapFetch || fetchBootstrapState;
 
     this.wsLoop();
   }
@@ -92,13 +89,15 @@ export class ReconnectingWebSocket implements SuperlumeSend {
       ws.send(this.serializeMsg('room:join', this.room));
       await this.once('room:joined');
 
-      const { body } = await this.documentFetch(
-        this.docsURL,
-        this.session.token,
-        this.session.docID
-      );
+      const bootstrapState = await this.bootstrapFetch({
+        docID: this.session.docID,
+        roomID: this.session.roomID,
+        docsURL: this.docsURL,
+        presenceURL: this.presenceURL,
+        token: this.session.token,
+      });
 
-      this.dispatcher.bootstrap(body);
+      this.dispatcher.bootstrap(bootstrapState);
 
       return ws;
     });
@@ -319,7 +318,7 @@ export type ForwardedMessageBody =
 
 export interface WebsocketDispatch {
   forwardCmd(type: string, body: ForwardedMessageBody): void;
-  bootstrap(checkpoint: DocumentCheckpoint): void;
+  bootstrap(state: BootstrapState): void;
   startQueueingCmds(): void;
 }
 
@@ -351,8 +350,10 @@ export type WebSocketTransport = Pick<
   'send' | 'onclose' | 'onmessage' | 'onerror' | 'close'
 >;
 
-export type DocumentFetch = (
-  url: string,
-  token: string,
-  docID: string
-) => Promise<Message<DocumentCheckpoint>>;
+export type BootstrapFetch = (props: {
+  docsURL: string;
+  presenceURL: string;
+  token: string;
+  roomID: string;
+  docID: string;
+}) => Promise<BootstrapState>;

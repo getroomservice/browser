@@ -7,6 +7,7 @@ import {
   MapInterpreter,
   DocumentCheckpoint,
 } from '@roomservice/core';
+import { BootstrapState } from 'remote';
 
 export type MapObject = { [key: string]: any };
 
@@ -45,10 +46,10 @@ export class InnerMapClient<T extends MapObject> implements ObjectClient {
     );
   }
 
-  public bootstrap(checkpoint: DocumentCheckpoint) {
+  public bootstrap(checkpoint: BootstrapState) {
     MapInterpreter.importFromRawCheckpoint(
       this.store,
-      checkpoint,
+      checkpoint.document,
       this.meta.mapID
     );
   }

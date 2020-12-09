@@ -1,4 +1,4 @@
-import { DOCS_URL } from './constants';
+import { DOCS_URL, PRESENCE_URL } from './constants';
 import { createRoom, RoomClient } from './RoomClient';
 import { AuthStrategy, AuthFunction } from 'types';
 
@@ -32,6 +32,7 @@ export class RoomService<T extends object> {
 
     const client = await createRoom<T>({
       docsURL: DOCS_URL,
+      presenceURL: PRESENCE_URL,
       authStrategy: this.auth,
       authCtx: this.ctx,
       room: name,

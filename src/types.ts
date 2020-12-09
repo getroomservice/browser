@@ -1,4 +1,4 @@
-import ReverseTree from './ReverseTree';
+import { ReverseTree } from '@roomservice/core/dist/ReverseTree';
 
 export interface Ref {
   type: 'map' | 'list';

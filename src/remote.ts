@@ -110,7 +110,6 @@ export async function fetchSession<T extends object>(params: {
     document,
   } = params;
   // A user defined function
-  console.log(typeof strategy);
   if (typeof strategy === 'function') {
     const result = await strategy({
       room,

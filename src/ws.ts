@@ -9,7 +9,13 @@ import {
   WebSocketJoinMessage,
 } from './wsMessages';
 import { WebSocketLikeConnection, Prop } from 'types';
-import { BootstrapState, fetchBootstrapState, LocalSession } from './remote';
+import {
+  AuthBundle,
+  BootstrapState,
+  fetchBootstrapState,
+  fetchSession,
+  LocalSession,
+} from './remote';
 import { delay } from './util';
 type Cb = (body: any) => void;
 
@@ -24,11 +30,14 @@ export class ReconnectingWebSocket implements SuperlumeSend {
   private docsURL: string;
   private presenceURL: string;
   private room: string;
+  private document: string;
 
-  private session: LocalSession;
+  private session?: LocalSession;
+  private authBundle: AuthBundle<any>;
 
   private wsFactory: WebSocketFactory;
   private bootstrapFetch: BootstrapFetch;
+  private sessionFetch: SessionFetch<any>;
 
   // Invariant: at most 1 of current/pendingConn are present
   private currentConn?: WebSocketLikeConnection;
@@ -43,18 +52,24 @@ export class ReconnectingWebSocket implements SuperlumeSend {
     docsURL: string;
     presenceURL: string;
     room: string;
-    session: LocalSession;
+    document: string;
+
+    authBundle: AuthBundle<any>;
+
     wsFactory?: WebSocketFactory;
     bootstrapFetch?: BootstrapFetch;
+    sessionFetch?: SessionFetch<any>;
   }) {
     this.dispatcher = params.dispatcher;
     this.wsURL = params.wsURL;
     this.docsURL = params.docsURL;
     this.presenceURL = params.presenceURL;
     this.room = params.room;
-    this.session = params.session;
+    this.document = params.document;
+    this.authBundle = params.authBundle;
     this.wsFactory = params.wsFactory || openWS;
     this.bootstrapFetch = params.bootstrapFetch || fetchBootstrapState;
+    this.sessionFetch = params.sessionFetch || fetchSession;
 
     this.wsLoop();
   }
@@ -75,7 +90,16 @@ export class ReconnectingWebSocket implements SuperlumeSend {
   }
 
   //  one-off attempt to connect and authenticate
+  //  precondition: session is present
   private async connectAndAuth(): Promise<WebSocketLikeConnection> {
+    if (!this.session) {
+      this.session = await this.sessionFetch({
+        authBundle: this.authBundle,
+        room: this.room,
+        document: this.document,
+      });
+    }
+    const session = this.session!;
     const ws = await this.wsFactory(this.wsURL);
     ws.onmessage = (ev) => {
       const msg = JSON.parse(ev.data) as WebSocketServerMessage;
@@ -83,18 +107,18 @@ export class ReconnectingWebSocket implements SuperlumeSend {
     };
     ws.onclose = () => this.close();
     return Promise.resolve(ws).then(async (ws) => {
-      ws.send(this.serializeMsg('guest:authenticate', this.session.token));
+      ws.send(this.serializeMsg('guest:authenticate', session.token));
       await this.once('guest:authenticated');
 
       ws.send(this.serializeMsg('room:join', this.room));
       await this.once('room:joined');
 
       const bootstrapState = await this.bootstrapFetch({
-        docID: this.session.docID,
-        roomID: this.session.roomID,
+        docID: session.docID,
+        roomID: session.roomID,
         docsURL: this.docsURL,
         presenceURL: this.presenceURL,
-        token: this.session.token,
+        token: session.token,
       });
 
       this.dispatcher.bootstrap(bootstrapState);
@@ -357,3 +381,9 @@ export type BootstrapFetch = (props: {
   roomID: string;
   docID: string;
 }) => Promise<BootstrapState>;
+
+export type SessionFetch<T extends object> = (params: {
+  authBundle: AuthBundle<T>;
+  room: string;
+  document: string;
+}) => Promise<LocalSession>;

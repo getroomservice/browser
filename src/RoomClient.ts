@@ -89,7 +89,11 @@ export class RoomClient implements WebsocketDispatch {
       docsURL,
       presenceURL,
       room: roomID,
-      session: params.session,
+      document: params.docID,
+      authBundle: {
+        strategy: params.auth,
+        ctx: params.authCtx,
+      },
     });
     this.roomID = params.roomID;
     this.docID = params.bootstrapState.document.id;
@@ -501,12 +505,14 @@ export async function createRoom<A extends object>(params: {
   room: string;
   document: string;
 }): Promise<RoomClient> {
-  const session = await fetchSession(
-    params.authStrategy,
-    params.authCtx,
-    params.room,
-    params.document
-  );
+  const session = await fetchSession({
+    authBundle: {
+      strategy: params.authStrategy,
+      ctx: params.authCtx,
+    },
+    room: params.room,
+    document: params.document,
+  });
 
   const bootstrapState = await fetchBootstrapState({
     docsURL: params.docsURL,

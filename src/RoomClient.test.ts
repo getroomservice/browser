@@ -1,6 +1,7 @@
 import { RoomClient } from './RoomClient';
 import { DocumentCheckpoint } from './types';
-import { BootstrapState, LocalSession } from 'remote';
+import { AuthBundle, BootstrapState, LocalSession } from 'remote';
+import { mockAuthBundle } from './remote.test';
 
 export function mockSession(): LocalSession {
   return {
@@ -9,6 +10,14 @@ export function mockSession(): LocalSession {
     docID: 'moc docID',
     roomID: 'moc roomID',
   };
+}
+
+export function mockSessionFetch(_: {
+  authBundle: AuthBundle<any>;
+  room: string;
+  document: string;
+}): Promise<LocalSession> {
+  return Promise.resolve(mockSession());
 }
 
 export function mockCheckpoint(): DocumentCheckpoint {
@@ -33,10 +42,11 @@ export function mockBootstrapState(): BootstrapState {
 function mockRoomClient(): RoomClient {
   const session = mockSession();
   const bootstrapState = mockBootstrapState();
+  const authBundle = mockAuthBundle();
 
   return new RoomClient({
-    auth: 'xyz',
-    authCtx: null,
+    auth: authBundle.strategy,
+    authCtx: authBundle.ctx,
     session,
     wsURL: 'wss://websocket.invalid',
     docsURL: 'https://docs.invalid',

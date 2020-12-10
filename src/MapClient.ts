@@ -12,7 +12,6 @@ import { BootstrapState } from 'remote';
 export type MapObject = { [key: string]: any };
 
 export class InnerMapClient<T extends MapObject> implements ObjectClient {
-  private roomID: string;
   private ws: SuperlumeSend;
 
   private meta: MapMeta;
@@ -22,14 +21,12 @@ export class InnerMapClient<T extends MapObject> implements ObjectClient {
 
   constructor(props: {
     checkpoint: DocumentCheckpoint;
-    roomID: string;
     docID: string;
     mapID: string;
     actor: string;
     ws: SuperlumeSend;
     bus: LocalBus<{ from: string; args: string[] }>;
   }) {
-    this.roomID = props.roomID;
     this.ws = props.ws;
     this.bus = props.bus;
     this.actor = props.actor;
@@ -61,7 +58,6 @@ export class InnerMapClient<T extends MapObject> implements ObjectClient {
 
   private sendCmd(cmd: string[]) {
     this.ws.send('doc:cmd', {
-      room: this.roomID,
       args: cmd,
     });
 

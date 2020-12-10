@@ -24,6 +24,9 @@ const WEBSOCKET_TIMEOUT = 1000 * 2;
 const MAX_UNSENT_DOC_CMDS = 10_000;
 
 const FORWARDED_TYPES = ['doc:fwd', 'presence:fwd', 'room:rm_guest'];
+type DocumentBody = Prop<WebSocketDocCmdMessage, 'body'>;
+type PresenceBody = Prop<WebSocketPresenceCmdMessage, 'body'>;
+type WithoutRoom<T> = Omit<T, 'room'>;
 
 export class ReconnectingWebSocket implements SuperlumeSend {
   private wsURL: string;
@@ -215,36 +218,35 @@ export class ReconnectingWebSocket implements SuperlumeSend {
     return JSON.stringify(msg);
   }
 
-  private docCmdSendQueue: Array<string> = [];
+  private docCmdSendQueue: Array<WithoutRoom<DocumentBody>> = [];
 
   //  only most recent presence cmd per-key is kept
-  private presenceCmdSendQueue: Map<string, string> = new Map();
+  private presenceCmdSendQueue = new Map<string, WithoutRoom<PresenceBody>>();
 
-  send(msgType: 'doc:cmd', body: Prop<WebSocketDocCmdMessage, 'body'>): void;
-  send(
-    msgType: 'presence:cmd',
-    body: Prop<WebSocketPresenceCmdMessage, 'body'>
-  ): void;
+  send(msgType: 'doc:cmd', body: WithoutRoom<DocumentBody>): void;
+  send(msgType: 'presence:cmd', body: WithoutRoom<PresenceBody>): void;
   send(msgType: Prop<WebSocketClientMessage, 'type'>, body: any): void {
     if (msgType == 'doc:cmd') {
       if (this.docCmdSendQueue.length >= MAX_UNSENT_DOC_CMDS) {
         throw 'RoomService send queue full';
       }
-      const msg = this.serializeMsg(msgType, body);
-      this.docCmdSendQueue.push(msg);
+      const docBody = body as WithoutRoom<DocumentBody>;
+      this.docCmdSendQueue.push(docBody);
     }
 
     if (msgType == 'presence:cmd') {
-      const msg = this.serializeMsg(msgType, body);
-      let presenceBody = body as Prop<WebSocketPresenceCmdMessage, 'body'>;
-      this.presenceCmdSendQueue.set(presenceBody.key, msg);
+      let presenceBody = body as WithoutRoom<PresenceBody>;
+      this.presenceCmdSendQueue.set(
+        presenceBody.key,
+        body as WithoutRoom<PresenceBody>
+      );
     }
 
     this.processSendQueue();
   }
 
   private processSendQueue() {
-    if (!this.currentConn) {
+    if (!this.currentConn || !this.session) {
       return;
     }
 
@@ -253,14 +255,22 @@ export class ReconnectingWebSocket implements SuperlumeSend {
         const first = this.presenceCmdSendQueue.entries().next();
         if (first) {
           const [key, msg] = first.value;
-          this.currentConn.send(msg);
+          const json = this.serializeMsg('presence:cmd', {
+            ...msg,
+            ...{ room: this.session!.roomID },
+          });
+          this.currentConn.send(json);
           this.presenceCmdSendQueue.delete(key);
         }
       }
 
       while (this.docCmdSendQueue.length > 0) {
         const msg = this.docCmdSendQueue[0];
-        this.currentConn.send(msg);
+        const json = this.serializeMsg('doc:cmd', {
+          ...msg,
+          ...{ room: this.session!.roomID },
+        });
+        this.currentConn.send(json);
         this.docCmdSendQueue.splice(0, 1);
       }
     } catch (e) {
@@ -342,7 +352,8 @@ export type ForwardedMessageBody =
 
 export interface WebsocketDispatch {
   forwardCmd(type: string, body: ForwardedMessageBody): void;
-  //  NOTE: it's possible for a future call to fetchSession ends up with a different userID
+  //  NOTE: it's possible for a future call to fetchSession ends up with a
+  //  different userID
   bootstrap(actor: string, state: BootstrapState): void;
   startQueueingCmds(): void;
 }
@@ -359,12 +370,11 @@ async function openWS(url: string): Promise<WebSocket> {
   });
 }
 
+//  `room` is omitted because the underlying SuperlumeSend implementation injects
+//  the room id which is only known after authenticating
 export interface SuperlumeSend {
-  send(msgType: 'doc:cmd', body: Prop<WebSocketDocCmdMessage, 'body'>): void;
-  send(
-    msgType: 'presence:cmd',
-    body: Prop<WebSocketPresenceCmdMessage, 'body'>
-  ): void;
+  send(msgType: 'doc:cmd', body: WithoutRoom<DocumentBody>): void;
+  send(msgType: 'presence:cmd', body: WithoutRoom<PresenceBody>): void;
   send(msgType: Prop<WebSocketClientMessage, 'type'>, body: any): void;
 }
 

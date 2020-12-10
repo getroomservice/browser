@@ -1,5 +1,5 @@
 import { SuperlumeSend } from './ws';
-import { PresenceCheckpoint, Prop } from './types';
+import { PresenceCheckpoint, PresenceObject, Prop } from './types';
 import {
   WebSocketPresenceFwdMessage,
   WebSocketLeaveMessage,
@@ -16,25 +16,22 @@ export type LocalPresenceUpdate = {
 type ValuesByUser<T extends any> = { [key: string]: T };
 
 export class InnerPresenceClient<T extends any> {
-  private roomID: string;
   private ws: SuperlumeSend;
-  private actor: string;
   private cache: PresenceCheckpoint<T>;
   private sendPres: (key: string, args: any) => any;
   private bus: LocalBus<LocalPresenceUpdate>;
   key: string;
 
+  private myValue?: PresenceObject<T> = undefined;
+  private actor?: string;
+
   constructor(props: {
-    roomID: string;
     checkpoint: BootstrapState;
     ws: SuperlumeSend;
-    actor: string;
     key: string;
     bus: LocalBus<LocalPresenceUpdate>;
   }) {
-    this.roomID = props.roomID;
     this.ws = props.ws;
-    this.actor = props.actor;
     this.key = props.key;
     this.cache = {};
     this.bus = props.bus;
@@ -43,8 +40,6 @@ export class InnerPresenceClient<T extends any> {
       this.ws.send('presence:cmd', args);
     };
     this.sendPres = throttleByFirstArgument(sendPres, 40);
-
-    this.bootstrap(this.actor, props.checkpoint);
   }
 
   bootstrap(actor: string, checkpoint: BootstrapState) {
@@ -54,6 +49,12 @@ export class InnerPresenceClient<T extends any> {
       ...this.cache,
       ...(checkpoint.presence[this.key] || {}),
     };
+
+    if (this.myValue !== undefined) {
+      if (this.cache[actor] && this.cache[actor].expAt <= this.myValue.expAt) {
+        this.cache[actor] = this.myValue;
+      }
+    }
   }
 
   /**
@@ -61,6 +62,9 @@ export class InnerPresenceClient<T extends any> {
    * organized by user id.
    */
   getAll(): ValuesByUser<T> {
+    if (!this.actor) {
+      return {};
+    }
     return this.withoutExpired();
   }
 
@@ -68,6 +72,9 @@ export class InnerPresenceClient<T extends any> {
    * Gets the current user's value.
    */
   getMine(): T | undefined {
+    if (!this.actor) {
+      return this.myValue?.value;
+    }
     return (this.cache || {})[this.actor]?.value;
   }
 
@@ -119,12 +126,18 @@ export class InnerPresenceClient<T extends any> {
     const expAt = Math.round(new Date().getTime() / 1000) + addition;
 
     this.sendPres(this.key, {
-      room: this.roomID,
       key: this.key,
       value: JSON.stringify(value),
       expAt: expAt,
     });
 
+    if (!this.actor) {
+      this.myValue = {
+        value,
+        expAt: new Date(expAt * 1000),
+      };
+      return this.withoutExpired();
+    }
     this.cache[this.actor] = {
       value,
       expAt: new Date(expAt * 1000),
@@ -170,7 +183,6 @@ export class InnerPresenceClient<T extends any> {
       return foo;
     }
 
-    if (body.room !== this.roomID) return false;
     if (body.from === this.actor) return false; // ignore validation msgs
 
     const obj = {

@@ -125,6 +125,18 @@ export class RoomClient implements WebsocketDispatch {
   bootstrap(actor: string, state: BootstrapState): void {
     this.actor = actor;
     this.bootstrapState = state;
+
+    //  make sure all clients in the checkpoint exist
+    for (const mapName of Object.keys(state.document.maps)) {
+      this.map(mapName);
+    }
+    for (const listName of Object.keys(state.document.lists)) {
+      this.list(listName);
+    }
+    for (const presenceKey of Object.keys(state.presence)) {
+      this.presence(presenceKey);
+    }
+
     for (const [_, client] of Object.entries(this.listClients)) {
       client.bootstrap(actor, state);
     }
@@ -134,6 +146,9 @@ export class RoomClient implements WebsocketDispatch {
     for (const [_, client] of Object.entries(this.presenceClients)) {
       client.bootstrap(actor, state);
     }
+
+    this.dispatchInitialUpdate();
+
     this.queueIncomingCmds = false;
     for (const [msgType, body] of this.cmdQueue) {
       this.processCmd(msgType, body);
@@ -267,6 +282,29 @@ export class RoomClient implements WebsocketDispatch {
     }
   }
 
+  private dispatchInitialUpdate() {
+    for (const [name, client] of Object.entries(this.mapClients)) {
+      const map = client.toObject();
+      for (const cb of this.mapCallbacksByObjID[name] || []) {
+        cb(map, '__initial__');
+      }
+    }
+
+    for (const [name, client] of Object.entries(this.listClients)) {
+      const list = client.toArray();
+      for (const cb of this.listCallbacksByObjID[name] || []) {
+        cb(list, '__initial__');
+      }
+    }
+
+    for (const [key, client] of Object.entries(this.presenceClients)) {
+      const valuesByUser = client.getAll();
+      for (const cb of this.presenceCallbacksByKey[key] || []) {
+        cb(valuesByUser, '__initial__');
+      }
+    }
+  }
+
   get me() {
     return this.actor;
   }
@@ -282,7 +320,6 @@ export class RoomClient implements WebsocketDispatch {
 
     const l = new InnerListClient<T>({
       checkpoint: this.bootstrapState.document,
-      roomID: this.roomID,
       docID: this.docID,
       listID: name,
       ws: this.ws,
@@ -302,7 +339,6 @@ export class RoomClient implements WebsocketDispatch {
     if (!this.bootstrapState.document.lists[name]) {
       this.ws.send('doc:cmd', {
         args: ['lcreate', this.docID, name],
-        room: this.roomID,
       });
 
       // Assume success
@@ -327,7 +363,6 @@ export class RoomClient implements WebsocketDispatch {
 
     const m = new InnerMapClient<T>({
       checkpoint: this.bootstrapState.document,
-      roomID: this.roomID,
       docID: this.docID,
       mapID: name,
       ws: this.ws,
@@ -347,7 +382,6 @@ export class RoomClient implements WebsocketDispatch {
     if (!this.bootstrapState.document.maps[name]) {
       this.ws.send('doc:cmd', {
         args: ['mcreate', this.docID, name],
-        room: this.roomID,
       });
     }
 
@@ -368,9 +402,7 @@ export class RoomClient implements WebsocketDispatch {
 
     const p = new InnerPresenceClient<T>({
       checkpoint: this.bootstrapState,
-      roomID: this.roomID,
       ws: this.ws,
-      actor: this.actor,
       key,
       bus,
     });

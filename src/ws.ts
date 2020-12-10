@@ -121,7 +121,7 @@ export class ReconnectingWebSocket implements SuperlumeSend {
         token: session.token,
       });
 
-      this.dispatcher.bootstrap(bootstrapState);
+      this.dispatcher.bootstrap(session.guestReference, bootstrapState);
 
       return ws;
     });
@@ -342,7 +342,8 @@ export type ForwardedMessageBody =
 
 export interface WebsocketDispatch {
   forwardCmd(type: string, body: ForwardedMessageBody): void;
-  bootstrap(state: BootstrapState): void;
+  //  NOTE: it's possible for a future call to fetchSession ends up with a different userID
+  bootstrap(actor: string, state: BootstrapState): void;
   startQueueingCmds(): void;
 }
 

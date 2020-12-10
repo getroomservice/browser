@@ -122,16 +122,17 @@ export class RoomClient implements WebsocketDispatch {
     }
   }
 
-  bootstrap(state: BootstrapState): void {
+  bootstrap(actor: string, state: BootstrapState): void {
+    this.actor = actor;
     this.bootstrapState = state;
     for (const [_, client] of Object.entries(this.listClients)) {
-      client.bootstrap(state);
+      client.bootstrap(actor, state);
     }
     for (const [_, client] of Object.entries(this.mapClients)) {
-      client.bootstrap(state);
+      client.bootstrap(actor, state);
     }
     for (const [_, client] of Object.entries(this.presenceClients)) {
-      client.bootstrap(state);
+      client.bootstrap(actor, state);
     }
     this.queueIncomingCmds = false;
     for (const [msgType, body] of this.cmdQueue) {

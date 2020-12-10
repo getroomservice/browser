@@ -47,14 +47,17 @@ export class InnerListClient<T extends ListObject> implements ObjectClient {
 
     ListInterpreter.importFromRawCheckpoint(
       this.store,
+      this.actor,
       props.checkpoint,
       this.meta.listID
     );
   }
 
-  bootstrap(checkpoint: BootstrapState) {
+  bootstrap(actor: string, checkpoint: BootstrapState) {
+    this.actor = actor;
     ListInterpreter.importFromRawCheckpoint(
       this.store,
+      this.actor,
       checkpoint.document,
       this.meta.listID
     );

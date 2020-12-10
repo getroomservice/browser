@@ -46,7 +46,8 @@ export class InnerMapClient<T extends MapObject> implements ObjectClient {
     );
   }
 
-  public bootstrap(checkpoint: BootstrapState) {
+  public bootstrap(actor: string, checkpoint: BootstrapState) {
+    this.actor = actor;
     MapInterpreter.importFromRawCheckpoint(
       this.store,
       checkpoint.document,

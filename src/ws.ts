@@ -110,7 +110,7 @@ export class ReconnectingWebSocket implements SuperlumeSend {
       ws.send(this.serializeMsg('guest:authenticate', session.token));
       await this.once('guest:authenticated');
 
-      ws.send(this.serializeMsg('room:join', this.room));
+      ws.send(this.serializeMsg('room:join', session.roomID));
       await this.once('room:joined');
 
       const bootstrapState = await this.bootstrapFetch({

@@ -48,6 +48,7 @@ export class InnerPresenceClient<T extends any> {
   }
 
   bootstrap(checkpoint: BootstrapState) {
+
     this.cache = {
       ...this.cache,
       ...(checkpoint.presence[this.key] || {}),

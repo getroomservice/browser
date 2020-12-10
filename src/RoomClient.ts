@@ -79,23 +79,23 @@ export class RoomClient implements WebsocketDispatch {
     actor: string;
     bootstrapState: BootstrapState;
     token: string;
-    roomID: string;
-    docID: string;
+    room: string;
+    document: string;
   }) {
-    const { wsURL, docsURL, presenceURL, roomID } = params;
+    const { wsURL, docsURL, presenceURL, room, document } = params;
     this.ws = new ReconnectingWebSocket({
       dispatcher: this,
       wsURL,
       docsURL,
       presenceURL,
-      room: roomID,
-      document: params.docID,
+      room,
+      document,
       authBundle: {
         strategy: params.auth,
         ctx: params.authCtx,
       },
     });
-    this.roomID = params.roomID;
+    this.roomID = params.session.roomID;
     this.docID = params.bootstrapState.document.id;
     this.actor = params.actor;
     this.bootstrapState = params.bootstrapState;
@@ -525,8 +525,8 @@ export async function createRoom<A extends object>(params: {
     actor: session.guestReference,
     bootstrapState,
     token: session.token,
-    roomID: session.roomID,
-    docID: params.document,
+    room: params.room,
+    document: params.document,
     auth: params.authStrategy,
     authCtx: params.authCtx,
     wsURL: WS_URL,

@@ -94,6 +94,10 @@ export class RoomClient implements WebsocketDispatch {
         strategy: params.auth,
         ctx: params.authCtx,
       },
+      sessionFetch: (_) => {
+        //  TODO: implement re-fetching of sessions when stale
+        return Promise.resolve(params.session);
+      },
     });
     this.roomID = params.session.roomID;
     this.docID = params.bootstrapState.document.id;
@@ -402,6 +406,7 @@ export class RoomClient implements WebsocketDispatch {
 
     const p = new InnerPresenceClient<T>({
       checkpoint: this.bootstrapState,
+      actor: this.actor,
       ws: this.ws,
       key,
       bus,

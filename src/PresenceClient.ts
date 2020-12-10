@@ -24,7 +24,6 @@ export class InnerPresenceClient<T extends any> {
   key: string;
 
   constructor(props: {
-    roomID: string;
     checkpoint: BootstrapState;
     ws: SuperlumeSend;
     actor: string;

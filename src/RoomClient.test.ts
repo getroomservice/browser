@@ -54,8 +54,8 @@ function mockRoomClient(): RoomClient {
     actor: 'me',
     bootstrapState,
     token: session.token,
-    roomID: session.roomID,
-    docID: session.docID,
+    room: 'myRoom',
+    document: 'default',
   });
 }
 

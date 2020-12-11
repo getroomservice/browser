@@ -79,19 +79,27 @@ export class RoomClient implements WebsocketDispatch {
     actor: string;
     bootstrapState: BootstrapState;
     token: string;
-    roomID: string;
-    docID: string;
+    room: string;
+    document: string;
   }) {
-    const { wsURL, docsURL, presenceURL, roomID } = params;
+    const { wsURL, docsURL, presenceURL, room, document } = params;
     this.ws = new ReconnectingWebSocket({
       dispatcher: this,
       wsURL,
       docsURL,
       presenceURL,
-      room: roomID,
-      session: params.session,
+      room,
+      document,
+      authBundle: {
+        strategy: params.auth,
+        ctx: params.authCtx,
+      },
+      sessionFetch: (_) => {
+        //  TODO: implement re-fetching of sessions when stale
+        return Promise.resolve(params.session);
+      },
     });
-    this.roomID = params.roomID;
+    this.roomID = params.session.roomID;
     this.docID = params.bootstrapState.document.id;
     this.actor = params.actor;
     this.bootstrapState = params.bootstrapState;
@@ -118,17 +126,20 @@ export class RoomClient implements WebsocketDispatch {
     }
   }
 
-  bootstrap(state: BootstrapState): void {
+  bootstrap(actor: string, state: BootstrapState): void {
+    this.actor = actor;
     this.bootstrapState = state;
+
     for (const [_, client] of Object.entries(this.listClients)) {
-      client.bootstrap(state);
+      client.bootstrap(actor, state);
     }
     for (const [_, client] of Object.entries(this.mapClients)) {
-      client.bootstrap(state);
+      client.bootstrap(actor, state);
     }
     for (const [_, client] of Object.entries(this.presenceClients)) {
-      client.bootstrap(state);
+      client.bootstrap(actor, state);
     }
+
     this.queueIncomingCmds = false;
     for (const [msgType, body] of this.cmdQueue) {
       this.processCmd(msgType, body);
@@ -364,8 +375,8 @@ export class RoomClient implements WebsocketDispatch {
     const p = new InnerPresenceClient<T>({
       checkpoint: this.bootstrapState,
       roomID: this.roomID,
-      ws: this.ws,
       actor: this.actor,
+      ws: this.ws,
       key,
       bus,
     });
@@ -501,12 +512,14 @@ export async function createRoom<A extends object>(params: {
   room: string;
   document: string;
 }): Promise<RoomClient> {
-  const session = await fetchSession(
-    params.authStrategy,
-    params.authCtx,
-    params.room,
-    params.document
-  );
+  const session = await fetchSession({
+    authBundle: {
+      strategy: params.authStrategy,
+      ctx: params.authCtx,
+    },
+    room: params.room,
+    document: params.document,
+  });
 
   const bootstrapState = await fetchBootstrapState({
     docsURL: params.docsURL,
@@ -519,8 +532,8 @@ export async function createRoom<A extends object>(params: {
     actor: session.guestReference,
     bootstrapState,
     token: session.token,
-    roomID: session.roomID,
-    docID: params.document,
+    room: params.room,
+    document: params.document,
     auth: params.authStrategy,
     authCtx: params.authCtx,
     wsURL: WS_URL,

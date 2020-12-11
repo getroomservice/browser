@@ -9,7 +9,13 @@ import {
   WebSocketJoinMessage,
 } from './wsMessages';
 import { WebSocketLikeConnection, Prop } from 'types';
-import { BootstrapState, fetchBootstrapState, LocalSession } from './remote';
+import {
+  AuthBundle,
+  BootstrapState,
+  fetchBootstrapState,
+  fetchSession,
+  LocalSession,
+} from './remote';
 import { delay } from './util';
 type Cb = (body: any) => void;
 
@@ -18,17 +24,22 @@ const WEBSOCKET_TIMEOUT = 1000 * 2;
 const MAX_UNSENT_DOC_CMDS = 10_000;
 
 const FORWARDED_TYPES = ['doc:fwd', 'presence:fwd', 'room:rm_guest'];
+type DocumentBody = Prop<WebSocketDocCmdMessage, 'body'>;
+type PresenceBody = Prop<WebSocketPresenceCmdMessage, 'body'>;
 
 export class ReconnectingWebSocket implements SuperlumeSend {
   private wsURL: string;
   private docsURL: string;
   private presenceURL: string;
   private room: string;
+  private document: string;
 
-  private session: LocalSession;
+  private session?: LocalSession;
+  private authBundle: AuthBundle<any>;
 
   private wsFactory: WebSocketFactory;
   private bootstrapFetch: BootstrapFetch;
+  private sessionFetch: SessionFetch<any>;
 
   // Invariant: at most 1 of current/pendingConn are present
   private currentConn?: WebSocketLikeConnection;
@@ -43,18 +54,24 @@ export class ReconnectingWebSocket implements SuperlumeSend {
     docsURL: string;
     presenceURL: string;
     room: string;
-    session: LocalSession;
+    document: string;
+
+    authBundle: AuthBundle<any>;
+
     wsFactory?: WebSocketFactory;
     bootstrapFetch?: BootstrapFetch;
+    sessionFetch?: SessionFetch<any>;
   }) {
     this.dispatcher = params.dispatcher;
     this.wsURL = params.wsURL;
     this.docsURL = params.docsURL;
     this.presenceURL = params.presenceURL;
     this.room = params.room;
-    this.session = params.session;
+    this.document = params.document;
+    this.authBundle = params.authBundle;
     this.wsFactory = params.wsFactory || openWS;
     this.bootstrapFetch = params.bootstrapFetch || fetchBootstrapState;
+    this.sessionFetch = params.sessionFetch || fetchSession;
 
     this.wsLoop();
   }
@@ -76,6 +93,14 @@ export class ReconnectingWebSocket implements SuperlumeSend {
 
   //  one-off attempt to connect and authenticate
   private async connectAndAuth(): Promise<WebSocketLikeConnection> {
+    if (!this.session) {
+      this.session = await this.sessionFetch({
+        authBundle: this.authBundle,
+        room: this.room,
+        document: this.document,
+      });
+    }
+    const session = this.session!;
     const ws = await this.wsFactory(this.wsURL);
     ws.onmessage = (ev) => {
       const msg = JSON.parse(ev.data) as WebSocketServerMessage;
@@ -83,21 +108,21 @@ export class ReconnectingWebSocket implements SuperlumeSend {
     };
     ws.onclose = () => this.close();
     return Promise.resolve(ws).then(async (ws) => {
-      ws.send(this.serializeMsg('guest:authenticate', this.session.token));
+      ws.send(this.serializeMsg('guest:authenticate', session.token));
       await this.once('guest:authenticated');
 
-      ws.send(this.serializeMsg('room:join', this.room));
+      ws.send(this.serializeMsg('room:join', session.roomID));
       await this.once('room:joined');
 
       const bootstrapState = await this.bootstrapFetch({
-        docID: this.session.docID,
-        roomID: this.session.roomID,
+        docID: session.docID,
+        roomID: session.roomID,
         docsURL: this.docsURL,
         presenceURL: this.presenceURL,
-        token: this.session.token,
+        token: session.token,
       });
 
-      this.dispatcher.bootstrap(bootstrapState);
+      this.dispatcher.bootstrap(session.guestReference, bootstrapState);
 
       return ws;
     });
@@ -191,36 +216,32 @@ export class ReconnectingWebSocket implements SuperlumeSend {
     return JSON.stringify(msg);
   }
 
-  private docCmdSendQueue: Array<string> = [];
+  private docCmdSendQueue: Array<DocumentBody> = [];
 
   //  only most recent presence cmd per-key is kept
-  private presenceCmdSendQueue: Map<string, string> = new Map();
+  private presenceCmdSendQueue = new Map<string, PresenceBody>();
 
-  send(msgType: 'doc:cmd', body: Prop<WebSocketDocCmdMessage, 'body'>): void;
-  send(
-    msgType: 'presence:cmd',
-    body: Prop<WebSocketPresenceCmdMessage, 'body'>
-  ): void;
+  send(msgType: 'doc:cmd', body: DocumentBody): void;
+  send(msgType: 'presence:cmd', body: PresenceBody): void;
   send(msgType: Prop<WebSocketClientMessage, 'type'>, body: any): void {
     if (msgType == 'doc:cmd') {
       if (this.docCmdSendQueue.length >= MAX_UNSENT_DOC_CMDS) {
         throw 'RoomService send queue full';
       }
-      const msg = this.serializeMsg(msgType, body);
-      this.docCmdSendQueue.push(msg);
+      const docBody = body as DocumentBody;
+      this.docCmdSendQueue.push(docBody);
     }
 
     if (msgType == 'presence:cmd') {
-      const msg = this.serializeMsg(msgType, body);
-      let presenceBody = body as Prop<WebSocketPresenceCmdMessage, 'body'>;
-      this.presenceCmdSendQueue.set(presenceBody.key, msg);
+      let presenceBody = body as PresenceBody;
+      this.presenceCmdSendQueue.set(presenceBody.key, body as PresenceBody);
     }
 
     this.processSendQueue();
   }
 
   private processSendQueue() {
-    if (!this.currentConn) {
+    if (!this.currentConn || !this.session) {
       return;
     }
 
@@ -229,14 +250,16 @@ export class ReconnectingWebSocket implements SuperlumeSend {
         const first = this.presenceCmdSendQueue.entries().next();
         if (first) {
           const [key, msg] = first.value;
-          this.currentConn.send(msg);
+          const json = this.serializeMsg('presence:cmd', msg);
+          this.currentConn.send(json);
           this.presenceCmdSendQueue.delete(key);
         }
       }
 
       while (this.docCmdSendQueue.length > 0) {
         const msg = this.docCmdSendQueue[0];
-        this.currentConn.send(msg);
+        const json = this.serializeMsg('doc:cmd', msg);
+        this.currentConn.send(json);
         this.docCmdSendQueue.splice(0, 1);
       }
     } catch (e) {
@@ -318,7 +341,9 @@ export type ForwardedMessageBody =
 
 export interface WebsocketDispatch {
   forwardCmd(type: string, body: ForwardedMessageBody): void;
-  bootstrap(state: BootstrapState): void;
+  //  NOTE: it's possible for a future call to fetchSession ends up with a
+  //  different userID
+  bootstrap(actor: string, state: BootstrapState): void;
   startQueueingCmds(): void;
 }
 
@@ -335,11 +360,8 @@ async function openWS(url: string): Promise<WebSocket> {
 }
 
 export interface SuperlumeSend {
-  send(msgType: 'doc:cmd', body: Prop<WebSocketDocCmdMessage, 'body'>): void;
-  send(
-    msgType: 'presence:cmd',
-    body: Prop<WebSocketPresenceCmdMessage, 'body'>
-  ): void;
+  send(msgType: 'doc:cmd', body: DocumentBody): void;
+  send(msgType: 'presence:cmd', body: PresenceBody): void;
   send(msgType: Prop<WebSocketClientMessage, 'type'>, body: any): void;
 }
 
@@ -357,3 +379,9 @@ export type BootstrapFetch = (props: {
   roomID: string;
   docID: string;
 }) => Promise<BootstrapState>;
+
+export type SessionFetch<T extends object> = (params: {
+  authBundle: AuthBundle<T>;
+  room: string;
+  document: string;
+}) => Promise<LocalSession>;

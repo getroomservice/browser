@@ -1,4 +1,4 @@
-import { mockSession } from './RoomClient.test';
+import { mockSessionFetch } from './RoomClient.test';
 import { Prop } from 'types';
 import {
   BootstrapFetch,
@@ -6,6 +6,7 @@ import {
   WebsocketDispatch,
   WebSocketFactory,
 } from './ws';
+import { mockAuthBundle } from './remote.test';
 
 function makeTestWSFactory(
   send: Prop<WebSocket, 'send'>,
@@ -41,7 +42,9 @@ function mockReconnectingWS(
     docsURL: 'https://docs.invalid',
     presenceURL: 'https://presence.invalid',
     room: 'mock-room',
-    session: mockSession(),
+    document: 'default',
+    authBundle: mockAuthBundle(),
+    sessionFetch: mockSessionFetch,
     wsFactory: makeTestWSFactory(send, onmessage),
     bootstrapFetch: fetch,
   });
@@ -52,8 +55,7 @@ test('Reconnecting WS sends handshake message using ws factory', async (done) =>
   const onmessage = jest.fn();
   const fetch = jest.fn();
 
-  //@ts-ignore
-  const _ws = mockReconnectingWS(send, onmessage, fetch);
+  mockReconnectingWS(send, onmessage, fetch);
 
   await sendDone;
   expect(JSON.parse(send.mock.calls[0][0])['type']).toEqual(

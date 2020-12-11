@@ -94,12 +94,21 @@ export interface LocalSession {
   roomID: string;
 }
 
-export async function fetchSession<T extends object>(
-  strategy: AuthStrategy<T>,
-  ctx: T,
-  room: string,
-  document: string
-): Promise<LocalSession> {
+export interface AuthBundle<T extends object> {
+  strategy: AuthStrategy<T>;
+  ctx: T;
+}
+
+export async function fetchSession<T extends object>(params: {
+  authBundle: AuthBundle<T>;
+  room: string;
+  document: string;
+}): Promise<LocalSession> {
+  const {
+    authBundle: { strategy, ctx },
+    room,
+    document,
+  } = params;
   // A user defined function
   if (typeof strategy === 'function') {
     const result = await strategy({

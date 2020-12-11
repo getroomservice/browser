@@ -44,10 +44,12 @@ export class InnerPresenceClient<T extends any> {
     };
     this.sendPres = throttleByFirstArgument(sendPres, 40);
 
-    this.bootstrap(props.checkpoint);
+    this.bootstrap(this.actor, props.checkpoint);
   }
 
-  bootstrap(checkpoint: BootstrapState) {
+  bootstrap(actor: string, checkpoint: BootstrapState) {
+    this.actor = actor;
+
     this.cache = {
       ...this.cache,
       ...(checkpoint.presence[this.key] || {}),

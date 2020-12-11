@@ -1068,10 +1068,10 @@
     estree-walker "^1.0.1"
     picomatch "^2.2.2"
 
-"@roomservice/core@0.2.1":
-  version "0.2.1"
-  resolved "https://registry.yarnpkg.com/@roomservice/core/-/core-0.2.1.tgz#c54d82f53519234fa8534ab322ad6b0c93a85eb8"
-  integrity sha512-bQ9TCBEAYpeWoPF+uGgnXHwd0j07p9EJL1lp+snLacUrx+S91lzqKpY0fUTfmAyJhv6VnffaHKs4X+q3o6jAvw==
+"@roomservice/core@0.3.1":
+  version "0.3.1"
+  resolved "https://registry.yarnpkg.com/@roomservice/core/-/core-0.3.1.tgz#9f8fc93b70b94e823d2958a4dd56cbfcc7974a3d"
+  integrity sha512-X+kmnuoO5c5NjdZ/rBfY7zdHOd7SOsuR1pFq+p5WdCoVe3EIUXmPk09AGghlfO35ALrl7gua00uWrBBqSKzkbQ==
   dependencies:
     tiny-invariant "^1.1.0"
 

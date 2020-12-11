@@ -359,8 +359,6 @@ async function openWS(url: string): Promise<WebSocket> {
   });
 }
 
-//  `room` is omitted because the underlying SuperlumeSend implementation injects
-//  the room id which is only known after authenticating
 export interface SuperlumeSend {
   send(msgType: 'doc:cmd', body: DocumentBody): void;
   send(msgType: 'presence:cmd', body: PresenceBody): void;

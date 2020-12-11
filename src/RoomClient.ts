@@ -130,17 +130,6 @@ export class RoomClient implements WebsocketDispatch {
     this.actor = actor;
     this.bootstrapState = state;
 
-    //  make sure all clients in the checkpoint exist
-    for (const mapName of Object.keys(state.document.maps)) {
-      this.map(mapName);
-    }
-    for (const listName of Object.keys(state.document.lists)) {
-      this.list(listName);
-    }
-    for (const presenceKey of Object.keys(state.presence)) {
-      this.presence(presenceKey);
-    }
-
     for (const [_, client] of Object.entries(this.listClients)) {
       client.bootstrap(actor, state);
     }
@@ -150,8 +139,6 @@ export class RoomClient implements WebsocketDispatch {
     for (const [_, client] of Object.entries(this.presenceClients)) {
       client.bootstrap(actor, state);
     }
-
-    this.dispatchInitialUpdate();
 
     this.queueIncomingCmds = false;
     for (const [msgType, body] of this.cmdQueue) {
@@ -283,29 +270,6 @@ export class RoomClient implements WebsocketDispatch {
     if (!newClient) return;
     for (const cb of this.presenceCallbacksByKey[key] ?? []) {
       cb(newClient, body.from);
-    }
-  }
-
-  private dispatchInitialUpdate() {
-    for (const [name, client] of Object.entries(this.mapClients)) {
-      const map = client.toObject();
-      for (const cb of this.mapCallbacksByObjID[name] || []) {
-        cb(map, '__initial__');
-      }
-    }
-
-    for (const [name, client] of Object.entries(this.listClients)) {
-      const list = client.toArray();
-      for (const cb of this.listCallbacksByObjID[name] || []) {
-        cb(list, '__initial__');
-      }
-    }
-
-    for (const [key, client] of Object.entries(this.presenceClients)) {
-      const valuesByUser = client.getAll();
-      for (const cb of this.presenceCallbacksByKey[key] || []) {
-        cb(valuesByUser, '__initial__');
-      }
     }
   }
 

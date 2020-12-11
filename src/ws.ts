@@ -26,7 +26,6 @@ const MAX_UNSENT_DOC_CMDS = 10_000;
 const FORWARDED_TYPES = ['doc:fwd', 'presence:fwd', 'room:rm_guest'];
 type DocumentBody = Prop<WebSocketDocCmdMessage, 'body'>;
 type PresenceBody = Prop<WebSocketPresenceCmdMessage, 'body'>;
-type WithoutRoom<T> = Omit<T, 'room'>;
 
 export class ReconnectingWebSocket implements SuperlumeSend {
   private wsURL: string;
@@ -93,7 +92,6 @@ export class ReconnectingWebSocket implements SuperlumeSend {
   }
 
   //  one-off attempt to connect and authenticate
-  //  precondition: session is present
   private async connectAndAuth(): Promise<WebSocketLikeConnection> {
     if (!this.session) {
       this.session = await this.sessionFetch({
@@ -218,28 +216,25 @@ export class ReconnectingWebSocket implements SuperlumeSend {
     return JSON.stringify(msg);
   }
 
-  private docCmdSendQueue: Array<WithoutRoom<DocumentBody>> = [];
+  private docCmdSendQueue: Array<DocumentBody> = [];
 
   //  only most recent presence cmd per-key is kept
-  private presenceCmdSendQueue = new Map<string, WithoutRoom<PresenceBody>>();
+  private presenceCmdSendQueue = new Map<string, PresenceBody>();
 
-  send(msgType: 'doc:cmd', body: WithoutRoom<DocumentBody>): void;
-  send(msgType: 'presence:cmd', body: WithoutRoom<PresenceBody>): void;
+  send(msgType: 'doc:cmd', body: DocumentBody): void;
+  send(msgType: 'presence:cmd', body: PresenceBody): void;
   send(msgType: Prop<WebSocketClientMessage, 'type'>, body: any): void {
     if (msgType == 'doc:cmd') {
       if (this.docCmdSendQueue.length >= MAX_UNSENT_DOC_CMDS) {
         throw 'RoomService send queue full';
       }
-      const docBody = body as WithoutRoom<DocumentBody>;
+      const docBody = body as DocumentBody;
       this.docCmdSendQueue.push(docBody);
     }
 
     if (msgType == 'presence:cmd') {
-      let presenceBody = body as WithoutRoom<PresenceBody>;
-      this.presenceCmdSendQueue.set(
-        presenceBody.key,
-        body as WithoutRoom<PresenceBody>
-      );
+      let presenceBody = body as PresenceBody;
+      this.presenceCmdSendQueue.set(presenceBody.key, body as PresenceBody);
     }
 
     this.processSendQueue();
@@ -255,10 +250,7 @@ export class ReconnectingWebSocket implements SuperlumeSend {
         const first = this.presenceCmdSendQueue.entries().next();
         if (first) {
           const [key, msg] = first.value;
-          const json = this.serializeMsg('presence:cmd', {
-            ...msg,
-            ...{ room: this.session!.roomID },
-          });
+          const json = this.serializeMsg('presence:cmd', msg);
           this.currentConn.send(json);
           this.presenceCmdSendQueue.delete(key);
         }
@@ -266,10 +258,7 @@ export class ReconnectingWebSocket implements SuperlumeSend {
 
       while (this.docCmdSendQueue.length > 0) {
         const msg = this.docCmdSendQueue[0];
-        const json = this.serializeMsg('doc:cmd', {
-          ...msg,
-          ...{ room: this.session!.roomID },
-        });
+        const json = this.serializeMsg('doc:cmd', msg);
         this.currentConn.send(json);
         this.docCmdSendQueue.splice(0, 1);
       }
@@ -373,8 +362,8 @@ async function openWS(url: string): Promise<WebSocket> {
 //  `room` is omitted because the underlying SuperlumeSend implementation injects
 //  the room id which is only known after authenticating
 export interface SuperlumeSend {
-  send(msgType: 'doc:cmd', body: WithoutRoom<DocumentBody>): void;
-  send(msgType: 'presence:cmd', body: WithoutRoom<PresenceBody>): void;
+  send(msgType: 'doc:cmd', body: DocumentBody): void;
+  send(msgType: 'presence:cmd', body: PresenceBody): void;
   send(msgType: Prop<WebSocketClientMessage, 'type'>, body: any): void;
 }
 

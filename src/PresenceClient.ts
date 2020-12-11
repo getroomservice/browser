@@ -16,6 +16,7 @@ export type LocalPresenceUpdate = {
 type ValuesByUser<T extends any> = { [key: string]: T };
 
 export class InnerPresenceClient<T extends any> {
+  private roomID: string;
   private ws: SuperlumeSend;
   private actor: string;
   private cache: PresenceCheckpoint<T>;
@@ -24,12 +25,14 @@ export class InnerPresenceClient<T extends any> {
   key: string;
 
   constructor(props: {
+    roomID: string;
     checkpoint: BootstrapState;
     ws: SuperlumeSend;
     actor: string;
     key: string;
     bus: LocalBus<LocalPresenceUpdate>;
   }) {
+    this.roomID = props.roomID;
     this.ws = props.ws;
     this.actor = props.actor;
     this.key = props.key;
@@ -116,6 +119,7 @@ export class InnerPresenceClient<T extends any> {
     const expAt = Math.round(new Date().getTime() / 1000) + addition;
 
     this.sendPres(this.key, {
+      room: this.roomID,
       key: this.key,
       value: JSON.stringify(value),
       expAt: expAt,
@@ -166,6 +170,7 @@ export class InnerPresenceClient<T extends any> {
       return foo;
     }
 
+    if (body.room !== this.roomID) return false;
     if (body.from === this.actor) return false; // ignore validation msgs
 
     const obj = {

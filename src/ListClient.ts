@@ -8,6 +8,7 @@ import { BootstrapState } from 'remote';
 export type ListObject = Array<any>;
 
 export class InnerListClient<T extends ListObject> implements ObjectClient {
+  private roomID: string;
   private ws: SuperlumeSend;
   private bus: LocalBus<any>;
   private actor: string;
@@ -18,12 +19,14 @@ export class InnerListClient<T extends ListObject> implements ObjectClient {
 
   constructor(props: {
     checkpoint: DocumentCheckpoint;
+    roomID: string;
     docID: string;
     listID: string;
     ws: SuperlumeSend;
     actor: string;
     bus: LocalBus<{ args: string[]; from: string }>;
   }) {
+    this.roomID = props.roomID;
     this.ws = props.ws;
     this.bus = props.bus;
     this.actor = props.actor;
@@ -62,6 +65,7 @@ export class InnerListClient<T extends ListObject> implements ObjectClient {
 
   private sendCmd(cmd: string[]) {
     this.ws.send('doc:cmd', {
+      room: this.roomID,
       args: cmd,
     });
 

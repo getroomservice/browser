@@ -324,6 +324,7 @@ export class RoomClient implements WebsocketDispatch {
 
     const l = new InnerListClient<T>({
       checkpoint: this.bootstrapState.document,
+      roomID: this.roomID,
       docID: this.docID,
       listID: name,
       ws: this.ws,
@@ -343,6 +344,7 @@ export class RoomClient implements WebsocketDispatch {
     if (!this.bootstrapState.document.lists[name]) {
       this.ws.send('doc:cmd', {
         args: ['lcreate', this.docID, name],
+        room: this.roomID,
       });
 
       // Assume success
@@ -367,6 +369,7 @@ export class RoomClient implements WebsocketDispatch {
 
     const m = new InnerMapClient<T>({
       checkpoint: this.bootstrapState.document,
+      roomID: this.roomID,
       docID: this.docID,
       mapID: name,
       ws: this.ws,
@@ -386,6 +389,7 @@ export class RoomClient implements WebsocketDispatch {
     if (!this.bootstrapState.document.maps[name]) {
       this.ws.send('doc:cmd', {
         args: ['mcreate', this.docID, name],
+        room: this.roomID,
       });
     }
 
@@ -406,6 +410,7 @@ export class RoomClient implements WebsocketDispatch {
 
     const p = new InnerPresenceClient<T>({
       checkpoint: this.bootstrapState,
+      roomID: this.roomID,
       actor: this.actor,
       ws: this.ws,
       key,

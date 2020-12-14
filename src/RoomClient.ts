@@ -36,19 +36,19 @@ const LIST_CMDS = ['lcreate', 'lins', 'linsref', 'lput', 'lputref', 'ldel'];
 
 type ListenerBundle = Array<Listener>;
 
-type InternalFunctions = 'dangerouslyUpdateClientDirectly';
-type Omit<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>>;
-export type MapClient<T extends MapObject> = Omit<
+export type MapClient<T extends MapObject> = Pick<
   InnerMapClient<T>,
-  InternalFunctions | 'id' | 'bootstrap'
+  'get' | 'set' | 'delete' | 'toObject' | 'keys'
 >;
-export type ListClient<T extends ListObject> = Omit<
+
+export type ListClient<T extends ListObject> = Pick<
   InnerListClient<T>,
-  'dangerouslyUpdateClientDirectly' | 'id' | 'bootstrap'
+  'insertAt' | 'insertAfter' | 'push' | 'set' | 'delete' | 'map' | 'toArray'
 >;
-export type PresenceClient<T extends any> = Omit<
+
+export type PresenceClient<T extends any> = Pick<
   InnerPresenceClient<T>,
-  'dangerouslyUpdateClientDirectly' | 'bootstrap'
+  'set' | 'getMine' | 'getAll'
 >;
 
 interface DispatchDocCmdMsg {

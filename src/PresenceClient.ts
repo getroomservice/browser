@@ -109,6 +109,8 @@ export class InnerPresenceClient<T extends any> {
     return result;
   }
 
+  private myExpirationHandle?: NodeJS.Timeout;
+
   /**
    * @param value Any arbitrary object, string, boolean, or number.
    * @param exp (Optional) Expiration time in seconds
@@ -117,6 +119,19 @@ export class InnerPresenceClient<T extends any> {
     let addition = exp ? exp : 60;
     // Convert to unix + add seconds
     const expAt = Math.round(new Date().getTime() / 1000) + addition;
+
+    if (this.myExpirationHandle) {
+      clearTimeout(this.myExpirationHandle);
+      this.myExpirationHandle = undefined;
+    }
+
+    this.myExpirationHandle = setTimeout(() => {
+      //  TODO: this should be revisited with the "process-own-messages" upcoming
+      //  change where we should be able to unify the other and self expiration
+      //  logic
+      delete this.cache[this.actor];
+      this.bus.publish({ key: this.key, valuesByUser: this.withoutExpired() });
+    }, addition * 1000);
 
     this.sendPres(this.key, {
       room: this.roomID,

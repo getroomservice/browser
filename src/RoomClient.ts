@@ -65,7 +65,9 @@ export class RoomClient implements WebsocketDispatch {
   private presenceClients: { [key: string]: InnerPresenceClient<any> } = {};
   private listClients: { [key: string]: InnerListClient<any> } = {};
   private mapClients: { [key: string]: InnerMapClient<any> } = {};
-  private expires: { [key: string]: NodeJS.Timeout } = {};
+  private expiresByActorByKey: {
+    [key: string]: { [key: string]: NodeJS.Timeout };
+  } = {};
 
   private ws: ReconnectingWebSocket;
 
@@ -245,8 +247,10 @@ export class RoomClient implements WebsocketDispatch {
 
     // Expire stuff if it's within a reasonable range (12h)
     if (secondsTillTimeout < 60 * 60 * 12) {
-      if (this.expires[key]) {
-        clearTimeout(this.expires[key]);
+      const expiresByActor = this.expiresByActorByKey[key] || {};
+      const actor = body.from;
+      if (expiresByActor[actor]) {
+        clearTimeout(expiresByActor[actor]);
       }
 
       let timeout = setTimeout(() => {
@@ -260,7 +264,8 @@ export class RoomClient implements WebsocketDispatch {
         }
       }, secondsTillTimeout * 1000);
 
-      this.expires[key] = timeout;
+      expiresByActor[actor] = timeout;
+      this.expiresByActorByKey[key] = expiresByActor;
     }
 
     const newClient = client.dangerouslyUpdateClientDirectly(

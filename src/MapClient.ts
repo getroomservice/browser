@@ -78,18 +78,22 @@ export class InnerMapClient<T extends MapObject> implements ObjectClient {
     ) as InnerMapClient<T>;
   }
 
-  dangerouslyUpdateClientDirectly(cmd: string[]): InnerMapClient<T> {
+  dangerouslyUpdateClientDirectly(
+    cmd: string[],
+    versionstamp: string,
+    ack: boolean
+  ): InnerMapClient<T> {
     MapInterpreter.validateCommand(this.meta, cmd);
-    MapInterpreter.applyCommand(this.store, cmd);
+    MapInterpreter.applyCommand(this.store, cmd, versionstamp, ack);
     return this.clone();
   }
 
   get keys() {
-    return Object.keys(this.store);
+    return Array.from(this.store.kv.keys());
   }
 
-  get<K extends keyof T>(key: K): T[K] {
-    return this.store[key as any] as T[K];
+  get<K extends keyof T>(key: K): T[K] | undefined {
+    return this.store.kv.get(key as any)?.value;
   }
 
   set<K extends keyof T>(key: K, value: T[K]): InnerMapClient<T> {

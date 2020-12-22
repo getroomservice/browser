@@ -94,7 +94,11 @@ export type Prop<V, K extends keyof V> = V[K];
 
 export interface ObjectClient {
   id: string;
-  dangerouslyUpdateClientDirectly(msg: any): ObjectClient;
+  dangerouslyUpdateClientDirectly(
+    msg: any,
+    versionstamp: string,
+    ack: boolean
+  ): ObjectClient;
 }
 
 export interface Resource {

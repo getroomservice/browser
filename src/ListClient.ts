@@ -32,11 +32,7 @@ export class InnerListClient<T extends ListObject> implements ObjectClient {
     this.actor = props.actor;
     this.id = props.listID;
 
-    const { meta, store } = ListInterpreter.newList(
-      props.docID,
-      props.listID,
-      props.actor
-    );
+    const { meta, store } = ListInterpreter.newList(props.docID, props.listID);
     this.meta = meta;
     this.store = store;
 
@@ -83,9 +79,13 @@ export class InnerListClient<T extends ListObject> implements ObjectClient {
     return cl;
   }
 
-  dangerouslyUpdateClientDirectly(cmd: string[]): InnerListClient<T> {
+  dangerouslyUpdateClientDirectly(
+    cmd: string[],
+    versionstamp: string,
+    ack: boolean
+  ): InnerListClient<T> {
     ListInterpreter.validateCommand(this.meta, cmd);
-    ListInterpreter.applyCommand(this.store, cmd);
+    ListInterpreter.applyCommand(this.store, cmd, versionstamp, ack);
     return this.clone();
   }
 

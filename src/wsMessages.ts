@@ -42,6 +42,7 @@ export interface WebSocketDocFwdMessage {
     room: string;
     vs: string;
     args: string[];
+    ack: boolean;
   };
 }
 

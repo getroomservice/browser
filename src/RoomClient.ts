@@ -14,7 +14,7 @@ import { InnerListClient, ListObject } from './ListClient';
 import { InnerMapClient, MapObject } from './MapClient';
 import { InnerPresenceClient, LocalPresenceUpdate } from './PresenceClient';
 import invariant from 'tiny-invariant';
-import { vsReader } from '@roomservice/core';
+import { isOlderVS } from '@roomservice/core';
 import {
   WebSocketDocFwdMessage,
   WebSocketLeaveMessage,
@@ -165,7 +165,7 @@ export class RoomClient implements WebsocketDispatch {
       return;
     }
     // Ignore version stamps older than checkpoint
-    if (vsReader(atob).isOlderVS(body.vs, this.bootstrapState.document.vs)) {
+    if (isOlderVS(body.vs, this.bootstrapState.document.vs)) {
       return;
     }
 
@@ -205,26 +205,40 @@ export class RoomClient implements WebsocketDispatch {
     }
   }
 
-  private dispatchMapCmd(objID: string, body: DispatchDocCmdMsg) {
+  private dispatchMapCmd(
+    objID: string,
+    body: Prop<WebSocketDocFwdMessage, 'body'>
+  ) {
     if (!this.mapClients[objID]) {
       this.createMapLocally(objID);
     }
 
     const client = this.mapClients[objID];
-    const updatedClient = client.dangerouslyUpdateClientDirectly(body.args);
+    const updatedClient = client.dangerouslyUpdateClientDirectly(
+      body.args,
+      body.vs,
+      body.ack
+    );
 
     for (const cb of this.mapCallbacksByObjID[objID] || []) {
       cb(updatedClient.toObject(), body.from);
     }
   }
 
-  private dispatchListCmd(objID: string, body: DispatchDocCmdMsg) {
+  private dispatchListCmd(
+    objID: string,
+    body: Prop<WebSocketDocFwdMessage, 'body'>
+  ) {
     if (!this.listClients[objID]) {
       this.createListLocally(objID);
     }
 
     const client = this.listClients[objID];
-    const updatedClient = client.dangerouslyUpdateClientDirectly(body.args);
+    const updatedClient = client.dangerouslyUpdateClientDirectly(
+      body.args,
+      body.vs,
+      body.ack
+    );
 
     for (const cb of this.listCallbacksByObjID[objID] || []) {
       cb(updatedClient.toArray(), body.from);

@@ -126,9 +126,7 @@ export class InnerPresenceClient<T extends any> {
     }
 
     this.myExpirationHandle = setTimeout(() => {
-      //  TODO: this should be revisited with the "process-own-messages" upcoming
-      //  change where we should be able to unify the other and self expiration
-      //  logic
+      //  TODO: this should be revisited when presence ACKs are added
       delete this.cache[this.actor];
       this.bus.publish({ key: this.key, valuesByUser: this.withoutExpired() });
     }, addition * 1000);

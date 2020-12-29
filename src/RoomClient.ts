@@ -169,11 +169,6 @@ export class RoomClient implements WebsocketDispatch {
       return;
     }
 
-    // Ignore validated commands
-    if (body.from === this.actor) {
-      return;
-    }
-
     const [cmd, docID, objID] = [body.args[0], body.args[1], body.args[2]];
 
     if (docID !== this.docID) return;
@@ -247,6 +242,7 @@ export class RoomClient implements WebsocketDispatch {
 
   private dispatchPresenceCmd(body: Prop<WebSocketPresenceFwdMessage, 'body'>) {
     if (body.room !== this.roomID) return;
+    //  TODO: use same ack logic as doc cmds
     if (body.from === this.actor) return;
 
     const key = body.key;

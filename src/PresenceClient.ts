@@ -186,7 +186,9 @@ export class InnerPresenceClient<T extends any> {
     }
 
     if (body.room !== this.roomID) return false;
-    if (body.from === this.actor) return false; // ignore validation msgs
+    // ignore validation msgs
+    // TODO: use same ack logic as doc cmds
+    if (body.from === this.actor) return false;
 
     const obj = {
       expAt: new Date(body.expAt * 1000),

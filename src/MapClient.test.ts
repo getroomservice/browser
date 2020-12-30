@@ -46,18 +46,20 @@ describe('InnerMapClient', () => {
   });
 
   test('interprets mput', () => {
-    map.dangerouslyUpdateClientDirectly([
-      'mput',
-      'doc',
-      'map',
-      'cats',
-      'smiles',
-    ]);
+    map.dangerouslyUpdateClientDirectly(
+      ['mput', 'doc', 'map', 'cats', 'smiles'],
+      btoa('1'),
+      false
+    );
     expect(map.get('cats')).toEqual('smiles');
   });
 
   test('interprets mdel', () => {
-    map.dangerouslyUpdateClientDirectly(['mdel', 'doc', 'map', 'cats']);
+    map.dangerouslyUpdateClientDirectly(
+      ['mdel', 'doc', 'map', 'cats'],
+      btoa('1'),
+      false
+    );
     expect(map.get('cats')).toBeFalsy();
   });
 

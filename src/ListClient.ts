@@ -156,4 +156,9 @@ export class InnerListClient<T extends ListObject> implements ObjectClient {
   toArray(): T[number][] {
     return ListInterpreter.toArray<T[number]>(this.store);
   }
+
+  //  exposed for testing
+  session(): string {
+    return this.store.rt.session;
+  }
 }

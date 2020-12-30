@@ -54,11 +54,13 @@ describe('list clients', () => {
 
     const finished = alpha.push(1).push({ x: 20, y: 30 }).push(3).push('cats');
 
+    const session = alpha.session();
+
     expect(finished.map((val, i, key) => [val, i, key])).toEqual([
-      [1, 0, '0:alpha'],
-      [{ x: 20, y: 30 }, 1, '1:alpha'],
-      [3, 2, '2:alpha'],
-      ['cats', 3, '3:alpha'],
+      [1, 0, `0:${session}`],
+      [{ x: 20, y: 30 }, 1, `1:${session}`],
+      [3, 2, `2:${session}`],
+      ['cats', 3, `3:${session}`],
     ]);
   });
 
@@ -98,7 +100,7 @@ describe('list clients', () => {
       'doc',
       'list',
       'root',
-      '0:alpha',
+      `0:${alpha.session()}`,
       '"cats"',
     ]);
   });
@@ -117,14 +119,11 @@ describe('list clients', () => {
       bus: new LocalBus(),
     });
     alpha = alpha.push('cats');
-    alpha = alpha.dangerouslyUpdateClientDirectly([
-      'lins',
-      'doc',
-      'list',
-      '0:alpha',
-      '0:bob',
-      '"dogs"',
-    ]);
+    alpha = alpha.dangerouslyUpdateClientDirectly(
+      ['lins', 'doc', 'list', `0:${alpha.session()}`, '0:bob', '"dogs"'],
+      btoa('1'),
+      false
+    );
     alpha = alpha.push('birds');
     alpha = alpha.push('lizards');
     alpha = alpha.push('blizzards');

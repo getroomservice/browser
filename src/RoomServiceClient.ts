@@ -1,6 +1,6 @@
 import { DOCS_URL, PRESENCE_URL } from './constants';
 import { createRoom, RoomClient } from './RoomClient';
-import { AuthStrategy, AuthFunction } from 'types';
+import { AuthStrategy, AuthFunction } from './types';
 
 interface SimpleAuthParams {
   auth: string;

@@ -1,5 +1,5 @@
 import { mockSessionFetch } from './RoomClient.test';
-import { Prop } from 'types';
+import { Prop } from './types';
 import {
   BootstrapFetch,
   ReconnectingWebSocket,

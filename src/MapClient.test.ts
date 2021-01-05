@@ -1,4 +1,4 @@
-import { Prop } from 'types';
+import { Prop } from './types';
 import { LocalBus } from './localbus';
 import { InnerMapClient } from './MapClient';
 import { WebSocketDocCmdMessage } from './wsMessages';

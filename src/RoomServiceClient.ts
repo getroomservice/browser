@@ -25,7 +25,7 @@ export class RoomService<T extends object> {
     this.ctx = (params as ComplexAuthParams<T>).ctx || ({} as T);
   }
 
-  async room(name: string) {
+  async room(name: string): Promise<RoomClient> {
     if (this.roomClients[name]) {
       return this.roomClients[name];
     }

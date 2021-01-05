@@ -1,4 +1,4 @@
-import { DocumentCheckpoint } from 'types';
+import { DocumentCheckpoint } from './types';
 
 export function unescapeID(checkpoint: DocumentCheckpoint, id: string): string {
   if (id === 'root') return 'root';
@@ -7,5 +7,5 @@ export function unescapeID(checkpoint: DocumentCheckpoint, id: string): string {
 }
 
 export function delay(ms: number) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }

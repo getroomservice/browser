@@ -7,7 +7,7 @@ import {
   MapInterpreter,
   DocumentCheckpoint,
 } from '@roomservice/core';
-import { BootstrapState } from 'remote';
+import { BootstrapState } from './remote';
 
 export type MapObject = { [key: string]: any };
 

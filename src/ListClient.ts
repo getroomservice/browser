@@ -3,7 +3,7 @@ import { ObjectClient, DocumentCheckpoint } from './types';
 import invariant from 'tiny-invariant';
 import { LocalBus } from './localbus';
 import { ListInterpreter, ListMeta, ListStore } from '@roomservice/core';
-import { BootstrapState } from 'remote';
+import { BootstrapState } from './remote';
 
 export type ListObject = Array<any>;
 

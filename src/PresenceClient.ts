@@ -5,8 +5,8 @@ import {
   WebSocketLeaveMessage,
 } from './wsMessages';
 import { throttleByFirstArgument } from './throttle';
-import { LocalBus } from 'localbus';
-import { BootstrapState } from 'remote';
+import { LocalBus } from './localbus';
+import { BootstrapState } from './remote';
 
 export type LocalPresenceUpdate = {
   key: string;

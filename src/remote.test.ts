@@ -1,4 +1,4 @@
-import { AuthResponse } from 'types';
+import { AuthResponse } from './types';
 import { AuthBundle, fetchSession } from './remote';
 
 export function mockAuthBundle(): AuthBundle<{}> {

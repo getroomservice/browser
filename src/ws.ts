@@ -8,7 +8,7 @@ import {
   WebSocketLeaveMessage,
   WebSocketJoinMessage,
 } from './wsMessages';
-import { WebSocketLikeConnection, Prop } from 'types';
+import { WebSocketLikeConnection, Prop } from './types';
 import {
   AuthBundle,
   BootstrapState,

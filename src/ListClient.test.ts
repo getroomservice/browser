@@ -1,7 +1,7 @@
 import { LocalBus } from './localbus';
 import { InnerListClient } from './ListClient';
 import { DocumentCheckpoint, Prop } from './types';
-import { WebSocketDocCmdMessage } from 'wsMessages';
+import { WebSocketDocCmdMessage } from './wsMessages';
 
 describe('list clients', () => {
   const checkpoint: DocumentCheckpoint = {

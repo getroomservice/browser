@@ -1,6 +1,6 @@
 import { RoomClient } from './RoomClient';
 import { DocumentCheckpoint } from './types';
-import { AuthBundle, BootstrapState, LocalSession } from 'remote';
+import { AuthBundle, BootstrapState, LocalSession } from './remote';
 import { mockAuthBundle } from './remote.test';
 
 export function mockSession(): LocalSession {

@@ -114,7 +114,7 @@ export interface AuthResponse {
   resources: Resource[];
 }
 
-export type AuthFunction<T extends object> = (params: {
+export type AuthFunction<T extends object | undefined> = (params: {
   room: string;
   ctx: T;
 }) => Promise<AuthResponse>;

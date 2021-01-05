@@ -6,7 +6,7 @@ interface SimpleAuthParams {
   auth: string;
 }
 
-interface ComplexAuthParams<T extends object> {
+interface ComplexAuthParams<T extends object | undefined> {
   auth: AuthFunction<T>;
   ctx: T;
 }
@@ -25,7 +25,7 @@ export class RoomService<T extends object> {
     this.ctx = (params as ComplexAuthParams<T>).ctx || ({} as T);
   }
 
-  async room(name: string) {
+  async room(name: string): Promise<RoomClient> {
     if (this.roomClients[name]) {
       return this.roomClients[name];
     }

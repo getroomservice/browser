@@ -88,8 +88,10 @@ export class InnerMapClient<T extends MapObject> implements ObjectClient {
     return this.clone();
   }
 
-  get keys() {
-    return Array.from(this.store.kv.keys());
+  get keys(): Array<keyof T> {
+    return Array.from(this.store.kv.entries())
+      .filter(([_k, v]) => v.value !== undefined)
+      .map(([k, _v]) => k);
   }
 
   get<K extends keyof T>(key: K): T[K] | undefined {

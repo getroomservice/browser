@@ -72,4 +72,13 @@ describe('InnerMapClient', () => {
       snakes: 'snakey',
     });
   });
+
+  test('immediately hides deleted keys', () => {
+    map.set('k', 'v');
+    map.delete('k');
+
+    expect(map.get('k')).toBeUndefined();
+    expect(map.keys.find((s) => s === 'k')).toBeUndefined();
+    expect(map.toObject()['k']).toBeUndefined();
+  });
 });

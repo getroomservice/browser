@@ -361,7 +361,7 @@ export class RoomClient implements WebsocketDispatch {
 
   map<T extends MapObject>(name: string): MapClient<T> {
     if (this.mapClients[name]) {
-      return this.mapClients[name];
+      return this.mapClients[name] as MapClient<T>;
     }
 
     // Create this map if it doesn't exist

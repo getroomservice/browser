@@ -109,7 +109,7 @@ export class InnerMapClient<T extends MapObject> implements ObjectClient {
     // Remote
     this.sendCmd(cmd);
 
-    return this.clone() as MapClient<T>;
+    return this.clone();
   }
 
   toObject(): T {
@@ -120,7 +120,7 @@ export class InnerMapClient<T extends MapObject> implements ObjectClient {
     return obj;
   }
 
-  delete<K extends keyof T>(key: K): InnerMapClient<T> {
+  delete<K extends keyof T>(key: K): MapClient<T> {
     const cmd = MapInterpreter.runDelete(this.store, this.meta, key as any);
 
     // remote

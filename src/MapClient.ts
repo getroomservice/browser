@@ -8,6 +8,7 @@ import {
   DocumentCheckpoint,
 } from '@roomservice/core';
 import { BootstrapState } from './remote';
+import { MapClient } from 'RoomClient';
 
 export type MapObject = { [key: string]: any };
 
@@ -98,13 +99,13 @@ export class InnerMapClient<T extends MapObject> implements ObjectClient {
     return this.store.kv.get(key as any)?.value;
   }
 
-  set<K extends keyof T>(key: K, value: T[K]): InnerMapClient<T> {
+  set<K extends keyof T>(key: K, value: T[K]): MapClient<T> {
     const cmd = MapInterpreter.runSet(this.store, this.meta, key as any, value);
 
     // Remote
     this.sendCmd(cmd);
 
-    return this.clone();
+    return this.clone() as MapClient<T>;
   }
 
   toObject(): T {

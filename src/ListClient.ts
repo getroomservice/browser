@@ -94,6 +94,9 @@ export class InnerListClient<T extends ListObject> implements ObjectClient {
   }
 
   set<K extends number>(index: K, val: T[K]): InnerListClient<T> {
+    if (val === undefined) {
+      return this.delete(index);
+    }
     const cmd = ListInterpreter.runSet(
       this.store,
       this.meta,

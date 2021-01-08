@@ -203,4 +203,21 @@ describe('list clients', () => {
 
     expect(finished.toArray()).toEqual(['a', 'b', 'c']);
   });
+
+  test('set undefined == delete', () => {
+    const l = new InnerListClient({
+      checkpoint,
+      roomID,
+      docID,
+      listID,
+      ws,
+      actor: 'me',
+      bus: new LocalBus(),
+    });
+
+    l.insertAt(0, 'a');
+    l.set(0, undefined);
+
+    expect(l.toArray()).toEqual([]);
+  });
 });

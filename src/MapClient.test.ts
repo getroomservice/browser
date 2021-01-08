@@ -81,4 +81,11 @@ describe('InnerMapClient', () => {
     expect(map.keys.find((s) => s === 'k')).toBeUndefined();
     expect(map.toObject()['k']).toBeUndefined();
   });
+
+  test('set undefined == delete', () => {
+    map.set('k', 'v');
+    map.set('k', undefined);
+
+    expect(map.toObject()['k']).toBeUndefined();
+  });
 });

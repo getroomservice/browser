@@ -100,6 +100,10 @@ export class InnerMapClient<T extends MapObject> implements ObjectClient {
   }
 
   set<K extends keyof T>(key: K, value: T[K]): MapClient<T> {
+    if (value === undefined) {
+      return this.delete(key);
+    }
+
     const cmd = MapInterpreter.runSet(this.store, this.meta, key as any, value);
 
     // Remote
